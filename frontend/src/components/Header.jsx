@@ -8,6 +8,14 @@ export default function Header() {
     const loc = useLocation();
     const onAdmin = loc.pathname.startsWith("/admin");
 
+    const isActive = (path) => path === "/" ? loc.pathname === "/" : loc.pathname.startsWith(path);
+    const navClass = (path) =>
+        `font-body uppercase font-bold text-xs tracking-wider px-3 py-2 border-2 transition-colors ${
+            isActive(path)
+                ? "bg-ink text-cream border-ink shadow-retro-sm"
+                : "border-transparent text-ink hover:text-brick hover:border-ink/20"
+        }`;
+
     return (
         <header className="border-b-2 border-ink bg-cream relative z-10" data-testid="site-header">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
@@ -21,11 +29,11 @@ export default function Header() {
                     </div>
                 </Link>
 
-                <nav className="hidden md:flex items-center gap-2">
-                    <Link to="/" className="font-body uppercase font-bold text-xs tracking-wider hover:text-brick" data-testid="nav-home">Home</Link>
-                    <Link to="/bracket" className="font-body uppercase font-bold text-xs tracking-wider hover:text-brick" data-testid="nav-bracket">Bracket</Link>
-                    <Link to="/leaderboard" className="font-body uppercase font-bold text-xs tracking-wider hover:text-brick" data-testid="nav-leaderboard">Leaderboard</Link>
-                    <Link to="/faq" className="font-body uppercase font-bold text-xs tracking-wider hover:text-brick" data-testid="nav-faq">FAQ</Link>
+                <nav className="hidden md:flex items-center gap-1">
+                    <Link to="/" className={navClass("/")} data-testid="nav-home" aria-current={isActive("/") ? "page" : undefined}>Home</Link>
+                    <Link to="/bracket" className={navClass("/bracket")} data-testid="nav-bracket" aria-current={isActive("/bracket") ? "page" : undefined}>Bracket</Link>
+                    <Link to="/leaderboard" className={navClass("/leaderboard")} data-testid="nav-leaderboard" aria-current={isActive("/leaderboard") ? "page" : undefined}>Leaderboard</Link>
+                    <Link to="/faq" className={navClass("/faq")} data-testid="nav-faq" aria-current={isActive("/faq") ? "page" : undefined}>FAQ</Link>
                 </nav>
 
                 <div className="flex items-center gap-2">
