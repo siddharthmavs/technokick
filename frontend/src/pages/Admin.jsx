@@ -140,7 +140,7 @@ function RegistrationsTab() {
                                 <td className="px-3 py-2">
                                     <select value={r.group || ""} onChange={(e) => setGroup(r.id, e.target.value)} className="border-2 border-ink px-2 py-1 font-bold text-xs uppercase bg-white" data-testid={`group-select-${r.id}`}>
                                         <option value="">— No group</option>
-                                        {GROUP_LETTERS.map((g) => <option key={g} value={g}>Group {g}</option>)}
+                                        {GROUP_LETTERS.map((g) => <option key={g} value={g}>{`Group ${g}`}</option>)}
                                     </select>
                                 </td>
                                 <td className="px-3 py-2 font-mono text-[10px] opacity-60">{new Date(r.created_at).toLocaleDateString()}</td>

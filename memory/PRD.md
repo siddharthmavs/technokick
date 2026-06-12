@@ -1,0 +1,42 @@
+# TechnoKick 2026 — PRD
+
+## Original Problem Statement
+"Go through the document I shared and implement all those, and the design should be more fun with pictures of the World Cup. It should be unique and user-friendly and all the users should enjoy using the app."
+
+In-house engagement platform for Technopark employees during the FIFA World Cup 2026.
+
+## User Clarifications
+- PS5 tournament is **individual (1v1)** — NOT teams. Committee draws players into groups, FIFA World Cup style (group round-robin → knockouts).
+- Users login via Phone + Name (frictionless, auto-creates account). Admin via Email + Password.
+- Design: Retro football-poster vibe (1970/1982 aesthetic) — see /app/design_guidelines.json.
+
+## Architecture
+- **Backend**: FastAPI (/app/backend/server.py), MongoDB (motor), PyJWT bearer auth, pandas/openpyxl for Excel export. All routes under `/api`.
+- **Frontend**: React + Tailwind (custom retro theme), react-router-dom, axios (token in localStorage `tk_token`), sonner toasts.
+- **Tests**: /app/backend/tests/backend_test.py (33 pytest cases, idempotent, run vs preview URL).
+
+## Implemented (as of 2026-06-12) ✅
+- Auth: phone+name user login (auto-create), admin email/password login, JWT, route guards (RequireUser/RequireAdmin).
+- Home: retro hero, announcements marquee, countdowns, PS5 + Predictions module cards, tournament wall chart, group standings toggle, live-match banner, next-up ticket.
+- PS5 tournament (individual): T&C page (/ps5/terms, editable rulebook), solo registration (/ps5/register) with ticket UI (payment status stamp, assigned group, edit/withdraw), group standings per group (top-2 highlight), bracket page (/bracket) with Group Stage / Knockouts tabs + draw-pot of unassigned players.
+- Daily predictions (/predict): 4 question types (dropdown, radio, exact scoreline, multi-select), fixture banners, 10AM–8PM IST window (frontend disable + backend 403 enforcement), editable until close, scored results display.
+- Dashboard (/dashboard): stat cards (points, predictions, group, payment), my PS5 matches, prediction history table.
+- Leaderboard (/leaderboard): top-10 with podium.
+- FAQ (/faq): accordion with scoring rules.
+- Admin panel (/admin), 7 tabs: Overview stats · Registrations (payment toggle, manual group assign A–H, 🎲 auto-assign draw with group size, Excel export) · Matches (create with player datalist, score/status/MOTM update, delete) · Fixtures CRUD · Questions (create, declare result → auto-scores all submissions) · Announcements CRUD (feeds marquee) · Settings (T&C rulebook editor).
+- Seeded: admin, 8 demo players in Groups A/B, 7 PS5 matches, 3 WC fixtures, 4 daily questions, 3 announcements. Migration auto-wipes legacy team-based data + refreshes stale T&C.
+
+## Scoring Rules
+- Outcome questions: 10 pts · Exact scoreline: +15 bonus · Multi-select scorers: 5 pts each · Yes/No: 5 pts.
+
+## Testing Status
+- Iteration 1 (2026-06-12): backend 33/33, frontend 18/18 flows PASS. Minor issues found (stale T&C, window not enforced, optional payload, option hydration warning) — all fixed and re-verified.
+
+## Backlog
+- P1: Profile avatars / customization for users.
+- P2: Tie-breaker logic for prediction leaderboard ties.
+- P2: Refactor server.py monolith into routers/ + models.py (noted by code review; ~880 lines).
+- P2: Auto-generate group round-robin fixtures after the draw (currently admin schedules manually).
+
+## Credentials
+See /app/memory/test_credentials.md (admin@technokick.com / admin123; users via any phone+name).

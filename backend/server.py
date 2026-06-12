@@ -400,11 +400,8 @@ async def predictions_submit(data: SubmissionIn, user: dict = Depends(get_curren
     now = now_utc()
     cur_hour = now.hour + now.minute / 60
     if not (start_hour_utc <= cur_hour <= end_hour_utc):
-        # If admin override "always_open" is true, allow
         if not setting.get("always_open", False):
-            # Accept anyway but mark as late? For MVP just allow; many users may be in different timezones.
-            # We'll still allow but include a warning. For strictness, raise. Allow for MVP demo.
-            pass
+            raise HTTPException(status_code=403, detail="The predictions window is closed. It's open daily 10AM–8PM IST.")
 
     for ans in data.answers:
         qid = ans.get("question_id")
@@ -506,8 +503,9 @@ async def admin_set_group(reg_id: str, payload: dict, _: dict = Depends(require_
 
 
 @api_router.post("/admin/groups/auto-assign")
-async def admin_auto_assign_groups(payload: dict, _: dict = Depends(require_admin)):
+async def admin_auto_assign_groups(payload: Optional[dict] = None, _: dict = Depends(require_admin)):
     """Shuffle registered players into groups of `group_size` — FIFA draw style."""
+    payload = payload or {}
     group_size = max(2, int(payload.get("group_size", 4)))
     only_confirmed = bool(payload.get("only_confirmed", False))
     query = {"payment_status": "confirmed"} if only_confirmed else {}
@@ -741,6 +739,9 @@ async def seed_database():
         await db.ps5_registrations.delete_many({})
     if await db.ps5_matches.find_one({"team_a": {"$exists": True}}):
         await db.ps5_matches.delete_many({})
+    tnc_doc = await db.settings.find_one({"id": "tnc"})
+    if tnc_doc and "team pools" in tnc_doc.get("content", ""):
+        await db.settings.update_one({"id": "tnc"}, {"$set": {"content": DEFAULT_TNC}})
 
     # Demo users
     demo_users = [
