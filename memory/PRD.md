@@ -39,6 +39,13 @@ In-house engagement platform for Technopark employees during the FIFA World Cup 
 - Games Help Desk hr@mav-s.com added: footer mailto, FAQ entry, PS5 payment instructions, T&C rule #10 (DB refreshed).
 - Hero: spinning ball removed → World Cup trophy polaroid ("THE CUP · 2026" + WIN IT stamp).
 
+## Update 2026-06-12 (round 3) — Web Push Notifications ✅
+- Standard Web Push (VAPID, no third-party accounts): pywebpush backend, self-generated VAPID keys in backend/.env (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT=mailto:hr@mav-s.com).
+- Endpoints: GET /api/push/vapid-public-key, POST /api/push/subscribe (upsert by endpoint in db.push_subscriptions), POST /api/push/unsubscribe.
+- Publishing an announcement (POST /api/admin/announcements) broadcasts a push to ALL subscribers via BackgroundTasks; dead subscriptions (404/410) auto-pruned. Verified via curl: broadcast fired, fake sub pruned.
+- Frontend: /public/sw.js service worker (push + notificationclick→open app), src/lib/push.js (subscribe flow), PushPrompt banner ("🔔 Never miss a kickoff! / Turn On Alerts / Not now" with localStorage dismiss) on Home + Dashboard. Hidden when permission denied or already subscribed.
+- Note: real push delivery can't run in headless browsers; verified banner UI, dismiss persistence, sw serving, and full backend pipeline. Regression 33/33 pass.
+
 ## Backlog
 - P1: Profile avatars / customization for users.
 - P2: Tie-breaker logic for prediction leaderboard ties.

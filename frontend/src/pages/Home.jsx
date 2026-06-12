@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Marquee from "../components/Marquee";
 import Countdown from "../components/Countdown";
+import PushPrompt from "../components/PushPrompt";
 import { BracketView, GroupStandings } from "../components/PS5";
 import { nextPS5Kickoff, predictionWindowClose, isPredictionWindowOpen } from "../lib/time";
 import api from "../lib/api";
@@ -44,6 +45,7 @@ export default function Home() {
     return (
         <div className="App min-h-screen bg-cream">
             <Header />
+            <PushPrompt />
             <Marquee items={marqueeItems} />
 
             {/* HERO */}

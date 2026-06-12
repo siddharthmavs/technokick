@@ -460,7 +460,7 @@ function AnnouncementsTab() {
 
     const create = async (e) => {
         e.preventDefault();
-        try { await api.post("/admin/announcements", form); toast.success("Announcement is live on the marquee!"); setForm({ title: "", body: "" }); load(); } catch (e2) { err(e2); }
+        try { await api.post("/admin/announcements", form); toast.success("📣 Published! It's on the marquee and push notifications are on their way to everyone."); setForm({ title: "", body: "" }); load(); } catch (e2) { err(e2); }
     };
     const remove = async (id) => {
         try { await api.delete(`/admin/announcements/${id}`); toast.success("Announcement removed"); load(); } catch (e) { err(e); }

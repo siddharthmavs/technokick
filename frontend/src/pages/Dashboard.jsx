@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
+import PushPrompt from "../components/PushPrompt";
 import { Footer } from "./Home";
 import { MatchCard } from "../components/PS5";
 import api from "../lib/api";
@@ -30,6 +31,7 @@ export default function Dashboard() {
     return (
         <div className="App min-h-screen bg-cream">
             <Header />
+            <PushPrompt />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
                 <div className="flex items-center gap-3 flex-wrap mb-2">
                     <span className="stamp stamp-brick">Player Dashboard</span>

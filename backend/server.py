@@ -7,17 +7,20 @@ import os
 import uuid
 import logging
 import io
+import json
 import math
 import random
 import itertools
+import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal, Any
 
 import jwt
 import bcrypt
 import pandas as pd
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
+from pywebpush import webpush, WebPushException
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
@@ -680,10 +683,79 @@ async def admin_enter_result(qid: str, data: QuestionResultIn, _: dict = Depends
 
 
 @api_router.post("/admin/announcements")
-async def admin_create_announcement(data: AnnouncementIn, _: dict = Depends(require_admin)):
+async def admin_create_announcement(data: AnnouncementIn, background_tasks: BackgroundTasks, _: dict = Depends(require_admin)):
     a = {"id": str(uuid.uuid4()), "title": data.title, "body": data.body, "created_at": now_utc().isoformat()}
     await db.announcements.insert_one(a)
+    background_tasks.add_task(broadcast_push, data.title, data.body, "/")
     return strip_id(a)
+
+
+# ============= WEB PUSH NOTIFICATIONS ===========================
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY")
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:hr@mav-s.com")
+
+
+async def broadcast_push(title: str, body: str, url: str = "/"):
+    """Send a web push notification to every stored subscription. Prunes dead ones (404/410)."""
+    if not (VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY):
+        logger.warning("VAPID keys missing — push broadcast skipped")
+        return
+    subs = await db.push_subscriptions.find({}, {"_id": 0}).to_list(5000)
+    payload = json.dumps({"title": title, "body": body, "url": url})
+    sent = pruned = 0
+    for s in subs:
+        def _send(sub=s):
+            webpush(
+                subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_SUBJECT},
+            )
+        try:
+            await asyncio.to_thread(_send)
+            sent += 1
+        except WebPushException as ex:
+            sc = getattr(getattr(ex, "response", None), "status_code", None)
+            if sc in (404, 410):
+                await db.push_subscriptions.delete_one({"endpoint": s["endpoint"]})
+                pruned += 1
+            else:
+                logger.warning(f"Push failed ({sc}): {ex}")
+        except Exception as e:
+            logger.warning(f"Push failed: {e}")
+    logger.info(f"Push broadcast '{title}': sent={sent}, pruned={pruned}, total={len(subs)}")
+
+
+@api_router.get("/push/vapid-public-key")
+async def vapid_public_key():
+    return {"publicKey": VAPID_PUBLIC_KEY}
+
+
+@api_router.post("/push/subscribe")
+async def push_subscribe(payload: dict):
+    sub = payload.get("subscription") or payload
+    endpoint = sub.get("endpoint")
+    keys = sub.get("keys") or {}
+    if not endpoint or not keys.get("p256dh") or not keys.get("auth"):
+        raise HTTPException(status_code=400, detail="Invalid push subscription")
+    await db.push_subscriptions.update_one(
+        {"endpoint": endpoint},
+        {
+            "$set": {"endpoint": endpoint, "keys": {"p256dh": keys["p256dh"], "auth": keys["auth"]}, "updated_at": now_utc().isoformat()},
+            "$setOnInsert": {"id": str(uuid.uuid4()), "created_at": now_utc().isoformat()},
+        },
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+@api_router.post("/push/unsubscribe")
+async def push_unsubscribe(payload: dict):
+    endpoint = payload.get("endpoint")
+    if endpoint:
+        await db.push_subscriptions.delete_many({"endpoint": endpoint})
+    return {"ok": True}
 
 
 @api_router.delete("/admin/announcements/{aid}")
