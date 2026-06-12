@@ -1,0 +1,47 @@
+{
+  "summary": "First testing run. Full backend + frontend coverage. 33/33 backend pytest tests passed against the deployed preview URL. 18/18 frontend Playwright flows passed (home, marquee, PS5 card, predict card, group standings, user login + dashboard, predict questions render & submit-enabled within 04:30-14:30 UTC window, bracket Group/Knockout tabs, leaderboard, FAQ, PS5 terms/proceed, PS5 register → ticket PAYMENT PENDING + Awaiting the draw + edit/withdraw, admin login + all 7 tabs, T&C save controls, registrations export + auto-assign). Predictions scoring verified end-to-end: created question → user submitted → admin declared result → 10 pts reflected in /predictions/history and /predictions/leaderboard. Seed admin idempotency + password-update path also implicitly verified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/settings/tnc", "issue": "DB content is the STALE team-based T&C (mentions '4-member team pools' and '₹100 per team') while the in-code DEFAULT_TNC has been rewritten for individual players. seed_database() only inserts T&C when missing; it never refreshes existing content after the schema/format change. Admin can fix via /admin/settings/tnc but the seeded out-of-the-box experience is wrong. Recommend: also overwrite if existing content !== DEFAULT_TNC during migration, OR include a one-time migration step that resets T&C when team-based seed data was wiped (lines 740-743)."},
+      {"endpoint": "POST /api/predictions/submit", "issue": "Documented in problem statement — backend accepts submissions outside the 10AM–8PM IST window (the time-window check is in place but then falls through with `pass`). Frontend disables the submit button outside the window, but API-only clients can bypass it. Consider enforcing 400/403 when not in window unless settings.always_open is true."},
+      {"endpoint": "/api/admin/registrations/{id}/group", "issue": "No validation that the group letter is within A–H (only uppercases the input). A typo like 'Z' or '' will be accepted. Minor — UI uses a constrained <select> so impact is low."},
+      {"endpoint": "POST /api/admin/groups/auto-assign", "issue": "When called with no payload body, FastAPI returns 422 since `payload: dict` is required. Recommend default body or Pydantic model with defaults so the admin button can call it body-less."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Admin → Registrations tab", "issue": "React hydration warning: <span style={{display:'contents'}}> rendered inside <option> elements of the group <select>. Browser console reports 'In HTML, <span> cannot be a child of <option>. This will cause a hydration error.' Likely injected by the dev wrapper around dynamic array map (GROUP_LETTERS at Admin.jsx:9 / line ~143). Functionality still works but pollutes the console; in production this could cause SSR/hydration mismatches. Use a flat {g} child without wrapping span, or move the dynamic source annotation off <option>.", "selector": "select option (Admin.jsx group-select-*)", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix stale T&C in DB: refresh /api/settings/tnc content during the team→individual migration (server.py around the wipe block at L740-743) so that newly-deployed instances see the individual-player T&C without manual admin save.",
+    "(Optional, per spec) Enforce predictions submission window on backend: return 403 when outside 04:30–14:30 UTC unless settings.always_open=true. Currently the check just `pass`-es through.",
+    "(Optional) Remove the dynamic-source <span> wrapper from <option> children in Admin.jsx group-select to avoid hydration warning.",
+    "(Optional) Make /api/admin/groups/auto-assign payload optional (Pydantic model with defaults) so admin can fire it without a body."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 860 lines — single-file monolith. Suggest splitting into routers/ (auth, ps5, predictions, admin) plus models.py and db.py for maintainability before adding more features.",
+    "JWT_SECRET is read at import time but no defensive fallback; missing env var would crash app startup. OK for fail-fast but consider clear error.",
+    "Predictions scoring (admin_enter_result) silently catches all exceptions per-submission, swallowing scoring bugs. Consider logging the offending submission id.",
+    "ps5_registrations create_index is missing on phone field; if phone+role uniqueness matters, add a partial unique index to prevent duplicate user rows under heavy concurrency.",
+    "auto-assign uses random.shuffle without seed control; reproducibility for re-runs requires admin to delete groups first (which they can do via group=null) — fine, but document it."
+  ],
+  "updated_files": [
+    "/app/backend/tests/__init__.py (new)",
+    "/app/backend/tests/backend_test.py (new — 33 pytest cases)"
+  ],
+  "success_rate": {"backend": "100% (33/33)", "frontend": "100% (18/18 flows)"},
+  "test_credentials": "Admin: admin@technokick.com / admin123 — works. User auto-create via phone+name works. Used a unique TEST_ phone per run to avoid polluting seeded users.",
+  "seed_data_creation": "Per E1 instructions, no seeded entities deleted. Created NEW question + fixture for declare-result scoring test, then cleaned them up. Created throwaway TEST_ matches/announcements/fixtures, all deleted after their test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All happy paths green. If T&C is updated in code, verify /api/settings/tnc returns new content (currently a manual admin save is required after deployment). Prediction submit window: current UTC at run was 09:40 → inside window. To test the disabled state, mock clock or temporarily set settings.window record outside 04:30-14:30. Backend pytest is regression-safe and idempotent — re-running is OK (uses unique TEST_ data per run).",
+  "rca of the issue": "Stale T&C: server.py:734-737 only inserts the T&C document if absent. When the team-based schema was migrated to individual players (server.py:740-743 wipes ps5_registrations and ps5_matches), the T&C document was NOT refreshed, so the old team-based markdown persists in MongoDB. The /api/settings/tnc endpoint correctly serves whatever is in DB → the frontend /ps5/terms page renders the outdated text. Fix: after the wipe block, run `await db.settings.update_one({'id':'tnc'}, {'$set':{'content':DEFAULT_TNC}})` (or only if current content contains 'team pools')."
+}

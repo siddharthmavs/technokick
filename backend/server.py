@@ -7,6 +7,8 @@ import os
 import uuid
 import logging
 import io
+import math
+import random
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal, Any
 
@@ -128,19 +130,16 @@ class PS5RegistrationIn(BaseModel):
     player_name: str
     company_name: str
     contact: str
-    team_name: Optional[str] = ""
-    pool_members: List[str] = Field(default_factory=list)
 
 
 class MatchIn(BaseModel):
-    branch: str
-    team_a: str  # team/pool name
-    team_a_company: str
-    team_b: str
-    team_b_company: str
+    player_a: str
+    player_a_company: str
+    player_b: str
+    player_b_company: str
     scheduled_at: str  # ISO
     station: str
-    round_label: Optional[str] = "Group"  # e.g. "Round of 16", "QF", "SF", "Final"
+    round_label: str = "Group A"  # "Group A".."Group H", "Round of 16", "Quarterfinal", "Semifinal", "Third Place", "Final"
 
 
 class MatchScoreIn(BaseModel):
@@ -249,8 +248,7 @@ async def create_registration(data: PS5RegistrationIn, user: dict = Depends(get_
         "player_name": data.player_name.strip(),
         "company_name": data.company_name.strip(),
         "contact": data.contact.strip(),
-        "team_name": (data.team_name or "").strip(),
-        "pool_members": [m.strip() for m in (data.pool_members or []) if m.strip()],
+        "group": None,
         "payment_status": "pending",
         "created_at": now_utc().isoformat(),
         "edited_at": None,
@@ -274,8 +272,6 @@ async def update_my_registration(data: PS5RegistrationIn, user: dict = Depends(g
         "player_name": data.player_name.strip(),
         "company_name": data.company_name.strip(),
         "contact": data.contact.strip(),
-        "team_name": (data.team_name or "").strip(),
-        "pool_members": [m.strip() for m in (data.pool_members or []) if m.strip()],
         "edited_at": now_utc().isoformat(),
     }
     await db.ps5_registrations.update_one({"id": reg["id"]}, {"$set": update})
@@ -303,9 +299,9 @@ async def my_matches(user: dict = Depends(get_current_user)):
     reg = await db.ps5_registrations.find_one({"user_id": user["id"]}, {"_id": 0})
     if not reg:
         return []
-    team_name = reg.get("team_name") or reg.get("player_name")
+    pname = reg.get("player_name")
     matches = await db.ps5_matches.find(
-        {"$or": [{"team_a": team_name}, {"team_b": team_name}, {"team_a_company": reg["company_name"]}, {"team_b_company": reg["company_name"]}]},
+        {"$or": [{"player_a": pname}, {"player_b": pname}]},
         {"_id": 0}
     ).sort("scheduled_at", 1).to_list(100)
     return matches
@@ -313,16 +309,23 @@ async def my_matches(user: dict = Depends(get_current_user)):
 
 @api_router.get("/ps5/points-table")
 async def points_table():
-    matches = await db.ps5_matches.find({"status": "completed"}, {"_id": 0}).to_list(500)
-    table: dict[str, dict] = {}
+    """Per-group player standings, FIFA World Cup style."""
+    groups: dict[str, dict[str, dict]] = {}
 
-    def row(company: str):
-        if company not in table:
-            table[company] = {"company": company, "played": 0, "won": 0, "drawn": 0, "lost": 0, "gf": 0, "ga": 0, "gd": 0, "points": 0}
-        return table[company]
+    def row(group: str, player: str, company: str):
+        g = groups.setdefault(group, {})
+        if player not in g:
+            g[player] = {"player": player, "company": company, "played": 0, "won": 0, "drawn": 0, "lost": 0, "gf": 0, "ga": 0, "gd": 0, "points": 0}
+        return g[player]
 
+    regs = await db.ps5_registrations.find({"group": {"$nin": [None, ""]}}, {"_id": 0}).to_list(1000)
+    for r in regs:
+        row(f"Group {r['group']}", r["player_name"], r.get("company_name", ""))
+
+    matches = await db.ps5_matches.find({"status": "completed", "round_label": {"$regex": "^Group"}}, {"_id": 0}).to_list(500)
     for m in matches:
-        a, b = row(m["team_a_company"]), row(m["team_b_company"])
+        a = row(m["round_label"], m["player_a"], m.get("player_a_company", ""))
+        b = row(m["round_label"], m["player_b"], m.get("player_b_company", ""))
         sa, sb = m.get("score_a", 0), m.get("score_b", 0)
         a["played"] += 1; b["played"] += 1
         a["gf"] += sa; a["ga"] += sb
@@ -333,10 +336,30 @@ async def points_table():
             b["won"] += 1; b["points"] += 3; a["lost"] += 1
         else:
             a["drawn"] += 1; b["drawn"] += 1; a["points"] += 1; b["points"] += 1
-    for r in table.values():
-        r["gd"] = r["gf"] - r["ga"]
-    rows = sorted(table.values(), key=lambda r: (-r["points"], -r["gd"], -r["gf"], r["company"]))
-    return rows
+
+    out = []
+    for g in sorted(groups.keys()):
+        rows = list(groups[g].values())
+        for r in rows:
+            r["gd"] = r["gf"] - r["ga"]
+        rows.sort(key=lambda r: (-r["points"], -r["gd"], -r["gf"], r["player"]))
+        out.append({"group": g, "rows": rows})
+    return out
+
+
+@api_router.get("/ps5/groups")
+async def list_groups():
+    """Public view of the group draw."""
+    regs = await db.ps5_registrations.find({}, {"_id": 0}).sort("player_name", 1).to_list(1000)
+    groups: dict[str, list] = {}
+    unassigned = []
+    for r in regs:
+        item = {"player_name": r["player_name"], "company_name": r.get("company_name", ""), "payment_status": r.get("payment_status")}
+        if r.get("group"):
+            groups.setdefault(r["group"], []).append(item)
+        else:
+            unassigned.append(item)
+    return {"groups": [{"group": k, "players": groups[k]} for k in sorted(groups)], "unassigned": unassigned}
 
 
 # ---------- Fixtures (real WC matches for predictions) ----------
@@ -473,6 +496,32 @@ async def admin_set_payment(reg_id: str, payload: dict, _: dict = Depends(requir
     return {"ok": True}
 
 
+@api_router.patch("/admin/registrations/{reg_id}/group")
+async def admin_set_group(reg_id: str, payload: dict, _: dict = Depends(require_admin)):
+    group = (payload.get("group") or "").strip().upper() or None
+    res = await db.ps5_registrations.update_one({"id": reg_id}, {"$set": {"group": group}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    return {"ok": True, "group": group}
+
+
+@api_router.post("/admin/groups/auto-assign")
+async def admin_auto_assign_groups(payload: dict, _: dict = Depends(require_admin)):
+    """Shuffle registered players into groups of `group_size` — FIFA draw style."""
+    group_size = max(2, int(payload.get("group_size", 4)))
+    only_confirmed = bool(payload.get("only_confirmed", False))
+    query = {"payment_status": "confirmed"} if only_confirmed else {}
+    regs = await db.ps5_registrations.find(query, {"_id": 0}).to_list(2000)
+    if not regs:
+        raise HTTPException(status_code=400, detail="No registrations to assign")
+    random.shuffle(regs)
+    num_groups = math.ceil(len(regs) / group_size)
+    letters = [chr(ord("A") + i) for i in range(num_groups)]
+    for i, reg in enumerate(regs):
+        await db.ps5_registrations.update_one({"id": reg["id"]}, {"$set": {"group": letters[i % num_groups]}})
+    return {"ok": True, "groups": num_groups, "players": len(regs)}
+
+
 @api_router.get("/admin/registrations/export")
 async def admin_registrations_export(_: dict = Depends(require_admin)):
     regs = await db.ps5_registrations.find({}, {"_id": 0}).to_list(2000)
@@ -510,9 +559,9 @@ async def admin_update_score(match_id: str, data: MatchScoreIn, _: dict = Depend
     winner = None
     if data.status == "completed":
         if data.score_a > data.score_b:
-            winner = match["team_a"]
+            winner = match["player_a"]
         elif data.score_b > data.score_a:
-            winner = match["team_b"]
+            winner = match["player_b"]
         else:
             winner = "Draw"
     update = {
@@ -641,14 +690,15 @@ async def admin_stats(_: dict = Depends(require_admin)):
 DEFAULT_TNC = """\
 **TechnoKick 2026 — PS5 FIFA Tournament Terms & Conditions**
 
-1. **Format**: 4-member team pools competing in a knockout bracket. 1v1 matches on PS5 EA Sports FC.
+1. **Format**: Individual (1v1) tournament played FIFA World Cup style. Players are drawn into groups by the committee. Round-robin within your group — top players advance to the knockout stage.
 2. **Eligibility**: Open to all employees of Technopark campus member companies.
-3. **Timing**: Matches start daily from 7:00 PM IST onwards on assigned stations.
-4. **Entry Fee**: ₹100 per team. Payment to be handed to the committee organizer at registration desk. Payment confirmation will reflect in your dashboard.
-5. **Match Conduct**: Default match length 6 minutes per half. Standard rules. No custom tactics carried across matches.
-6. **Code of Conduct**: Be respectful. Trash talk in good fun only. Cheating = disqualification.
-7. **No-show**: 5-minute grace, then walkover (3-0 default) awarded to opponent.
-8. **Withdrawal**: Allowed until fixtures are published. Post lock, contact committee.
+3. **Entry Fee**: ₹100 per player. Pay at the committee desk; confirmation reflects in your dashboard.
+4. **Group Draw**: Groups are assigned by the committee after registrations close — just like the World Cup draw. Check your group on your dashboard.
+5. **Timing**: Matches start daily from 7:00 PM IST onwards on assigned stations.
+6. **Match Conduct**: 6 minutes per half on PS5 EA Sports FC. Standard rules. No custom tactics carried across matches.
+7. **Code of Conduct**: Be respectful. Trash talk in good fun only. Cheating = disqualification.
+8. **No-show**: 5-minute grace, then walkover (3-0 default) awarded to opponent.
+9. **Withdrawal**: Allowed until the group draw is published. Post draw, contact the committee.
 """
 
 
@@ -686,60 +736,58 @@ async def seed_database():
     if not tnc:
         await db.settings.insert_one({"id": "tnc", "content": DEFAULT_TNC})
 
-    # Demo users for predictions leaderboard
+    # Migrate: wipe old team-based seed data (schema changed to individual players)
+    if await db.ps5_registrations.find_one({"team_name": {"$exists": True}}):
+        await db.ps5_registrations.delete_many({})
+    if await db.ps5_matches.find_one({"team_a": {"$exists": True}}):
+        await db.ps5_matches.delete_many({})
+
+    # Demo users
     demo_users = [
         {"name": "Rahul Krishnan", "phone": "9000000001", "company": "Infosys"},
         {"name": "Priya Menon", "phone": "9000000002", "company": "UST Global"},
         {"name": "Arjun Nair", "phone": "9000000003", "company": "TCS"},
         {"name": "Sneha Pillai", "phone": "9000000004", "company": "Allianz"},
         {"name": "Vikram Iyer", "phone": "9000000005", "company": "Tata Elxsi"},
+        {"name": "Anjali Das", "phone": "9000000006", "company": "EY"},
+        {"name": "Jithin George", "phone": "9000000007", "company": "Quest Global"},
+        {"name": "Meera Suresh", "phone": "9000000008", "company": "IBS Software"},
     ]
     for du in demo_users:
         if not await db.users.find_one({"phone": du["phone"]}):
             await db.users.insert_one({"id": str(uuid.uuid4()), **du, "role": "user", "created_at": now_utc().isoformat()})
 
-    # PS5 Registrations
+    # PS5 Registrations: individual players drawn into groups A/B
     if await db.ps5_registrations.count_documents({}) == 0:
-        sample_users = await db.users.find({"role": "user"}, {"_id": 0}).to_list(20)
-        sample_regs = [
-            ("Galactic Strikers", "Infosys", ["Aravind R", "Devika M", "Karan S"]),
-            ("Code Crushers", "UST Global", ["Anita V", "Rohan K", "Meera P"]),
-            ("Pixel Pirates", "TCS", ["Sandeep A", "Vinaya N", "Jithin G"]),
-            ("Allianz United", "Allianz", ["Bhavya M", "Akhil S", "Reshma T"]),
-            ("Elxsi FC", "Tata Elxsi", ["Praveen K", "Anjana D", "Hari S"]),
-        ]
-        for i, (team, company, members) in enumerate(sample_regs):
-            if i < len(sample_users):
-                u = sample_users[i]
-                await db.ps5_registrations.insert_one({
-                    "id": str(uuid.uuid4()),
-                    "user_id": u["id"],
-                    "player_name": u["name"],
-                    "company_name": company,
-                    "contact": u["phone"],
-                    "team_name": team,
-                    "pool_members": members,
-                    "payment_status": "confirmed" if i < 3 else "pending",
-                    "created_at": now_utc().isoformat(),
-                    "edited_at": None,
-                })
+        seed_players = await db.users.find({"role": "user", "phone": {"$in": [d["phone"] for d in demo_users]}}, {"_id": 0}).sort("phone", 1).to_list(20)
+        group_map = ["A", "A", "A", "A", "B", "B", "B", "B"]
+        for i, u in enumerate(seed_players[:8]):
+            await db.ps5_registrations.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": u["id"],
+                "player_name": u["name"],
+                "company_name": u.get("company", ""),
+                "contact": u.get("phone", ""),
+                "group": group_map[i] if i < len(group_map) else None,
+                "payment_status": "confirmed" if i < 6 else "pending",
+                "created_at": now_utc().isoformat(),
+                "edited_at": None,
+            })
 
-    # PS5 Matches (sample knockout)
+    # PS5 Matches: group stage + knockout, individual players
     if await db.ps5_matches.count_documents({}) == 0:
         base = now_utc().replace(hour=13, minute=30, second=0, microsecond=0)  # 7 PM IST = 13:30 UTC
         sample_matches = [
-            # Round of 16 - completed
-            {"round_label": "Round of 16", "branch": "A", "team_a": "Galactic Strikers", "team_a_company": "Infosys", "team_b": "Code Crushers", "team_b_company": "UST Global", "station": "Station 1", "scheduled_at": (base - timedelta(days=2)).isoformat(), "score_a": 3, "score_b": 1, "status": "completed", "winner": "Galactic Strikers"},
-            {"round_label": "Round of 16", "branch": "A", "team_a": "Pixel Pirates", "team_a_company": "TCS", "team_b": "Allianz United", "team_b_company": "Allianz", "station": "Station 2", "scheduled_at": (base - timedelta(days=2, hours=-1)).isoformat(), "score_a": 2, "score_b": 2, "status": "completed", "winner": "Draw"},
-            {"round_label": "Round of 16", "branch": "B", "team_a": "Elxsi FC", "team_a_company": "Tata Elxsi", "team_b": "Code Crushers", "team_b_company": "UST Global", "station": "Station 3", "scheduled_at": (base - timedelta(days=1)).isoformat(), "score_a": 1, "score_b": 3, "status": "completed", "winner": "Code Crushers"},
-            # Quarterfinals - live & upcoming
-            {"round_label": "Quarterfinal", "branch": "A", "team_a": "Galactic Strikers", "team_a_company": "Infosys", "team_b": "Pixel Pirates", "team_b_company": "TCS", "station": "Station 1", "scheduled_at": base.isoformat(), "score_a": 1, "score_b": 0, "status": "live", "winner": None},
-            {"round_label": "Quarterfinal", "branch": "B", "team_a": "Allianz United", "team_a_company": "Allianz", "team_b": "Code Crushers", "team_b_company": "UST Global", "station": "Station 2", "scheduled_at": (base + timedelta(hours=1)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None},
-            {"round_label": "Semifinal", "branch": "A", "team_a": "TBD", "team_a_company": "TBD", "team_b": "TBD", "team_b_company": "TBD", "station": "Station 1", "scheduled_at": (base + timedelta(days=1)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None},
-            {"round_label": "Final", "branch": "FINAL", "team_a": "TBD", "team_a_company": "TBD", "team_b": "TBD", "team_b_company": "TBD", "station": "Main Arena", "scheduled_at": (base + timedelta(days=3)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None},
+            {"round_label": "Group A", "player_a": "Rahul Krishnan", "player_a_company": "Infosys", "player_b": "Priya Menon", "player_b_company": "UST Global", "station": "Station 1", "scheduled_at": (base - timedelta(days=2)).isoformat(), "score_a": 3, "score_b": 1, "status": "completed", "winner": "Rahul Krishnan", "player_of_match": "Rahul Krishnan"},
+            {"round_label": "Group A", "player_a": "Arjun Nair", "player_a_company": "TCS", "player_b": "Sneha Pillai", "player_b_company": "Allianz", "station": "Station 2", "scheduled_at": (base - timedelta(days=2, hours=-1)).isoformat(), "score_a": 2, "score_b": 2, "status": "completed", "winner": "Draw", "player_of_match": None},
+            {"round_label": "Group B", "player_a": "Vikram Iyer", "player_a_company": "Tata Elxsi", "player_b": "Anjali Das", "player_b_company": "EY", "station": "Station 1", "scheduled_at": (base - timedelta(days=1)).isoformat(), "score_a": 1, "score_b": 3, "status": "completed", "winner": "Anjali Das", "player_of_match": "Anjali Das"},
+            {"round_label": "Group B", "player_a": "Jithin George", "player_a_company": "Quest Global", "player_b": "Meera Suresh", "player_b_company": "IBS Software", "station": "Station 2", "scheduled_at": base.isoformat(), "score_a": 1, "score_b": 0, "status": "live", "winner": None, "player_of_match": None},
+            {"round_label": "Group A", "player_a": "Rahul Krishnan", "player_a_company": "Infosys", "player_b": "Arjun Nair", "player_b_company": "TCS", "station": "Station 1", "scheduled_at": (base + timedelta(hours=1)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None, "player_of_match": None},
+            {"round_label": "Semifinal", "player_a": "TBD", "player_a_company": "TBD", "player_b": "TBD", "player_b_company": "TBD", "station": "Station 1", "scheduled_at": (base + timedelta(days=1)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None, "player_of_match": None},
+            {"round_label": "Final", "player_a": "TBD", "player_a_company": "TBD", "player_b": "TBD", "player_b_company": "TBD", "station": "Main Arena", "scheduled_at": (base + timedelta(days=3)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None, "player_of_match": None},
         ]
         for m in sample_matches:
-            await db.ps5_matches.insert_one({"id": str(uuid.uuid4()), "player_of_match": None, "created_at": now_utc().isoformat(), **m})
+            await db.ps5_matches.insert_one({"id": str(uuid.uuid4()), "created_at": now_utc().isoformat(), **m})
 
     # Fixtures (real WC matches for predictions)
     if await db.fixtures.count_documents({}) == 0:

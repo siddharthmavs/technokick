@@ -1,56 +1,70 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "./lib/auth";
+import { Toaster } from "./components/ui/sonner";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
+import PS5Terms from "./pages/PS5Terms";
+import PS5Register from "./pages/PS5Register";
+import Predict from "./pages/Predict";
+import Dashboard from "./pages/Dashboard";
+import Leaderboard from "./pages/Leaderboard";
+import Bracket from "./pages/Bracket";
+import FAQ from "./pages/FAQ";
+import Admin from "./pages/Admin";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
-  );
+function Splash() {
+    return (
+        <div className="min-h-screen bg-cream flex items-center justify-center">
+            <div className="font-heading text-4xl uppercase animate-pulse text-ink">TechnoKick…</div>
+        </div>
+    );
 }
 
-export default App;
+function RequireUser({ children }) {
+    const { user, loading } = useAuth();
+    const loc = useLocation();
+    if (loading) return <Splash />;
+    if (!user) return <Navigate to={`/login?next=${encodeURIComponent(loc.pathname)}`} replace />;
+    return children;
+}
+
+function RequireAdmin({ children }) {
+    const { user, loading } = useAuth();
+    if (loading) return <Splash />;
+    if (!user || user.role !== "admin") return <Navigate to="/admin/login" replace />;
+    return children;
+}
+
+function ScrollToTop() {
+    const { pathname } = useLocation();
+    useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+    return null;
+}
+
+export default function App() {
+    return (
+        <AuthProvider>
+            <BrowserRouter>
+                <ScrollToTop />
+                <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route path="/bracket" element={<Bracket />} />
+                    <Route path="/leaderboard" element={<Leaderboard />} />
+                    <Route path="/faq" element={<FAQ />} />
+                    <Route path="/ps5/terms" element={<PS5Terms />} />
+                    <Route path="/ps5/register" element={<RequireUser><PS5Register /></RequireUser>} />
+                    <Route path="/predict" element={<RequireUser><Predict /></RequireUser>} />
+                    <Route path="/dashboard" element={<RequireUser><Dashboard /></RequireUser>} />
+                    <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+                <Toaster position="top-center" richColors closeButton />
+            </BrowserRouter>
+        </AuthProvider>
+    );
+}

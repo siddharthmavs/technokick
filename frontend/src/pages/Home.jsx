@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Marquee from "../components/Marquee";
 import Countdown from "../components/Countdown";
+import { BracketView, GroupStandings } from "../components/PS5";
 import { nextPS5Kickoff, predictionWindowClose, isPredictionWindowOpen } from "../lib/time";
 import api from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -15,13 +16,13 @@ export default function Home() {
     const navigate = useNavigate();
     const [matches, setMatches] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
-    const [points, setPoints] = useState([]);
-    const [view, setView] = useState("bracket"); // 'bracket' | 'points'
+    const [standings, setStandings] = useState([]);
+    const [view, setView] = useState("bracket"); // 'bracket' | 'standings'
 
     useEffect(() => {
         api.get("/ps5/matches").then((r) => setMatches(r.data)).catch(() => {});
         api.get("/announcements").then((r) => setAnnouncements(r.data)).catch(() => {});
-        api.get("/ps5/points-table").then((r) => setPoints(r.data)).catch(() => {});
+        api.get("/ps5/points-table").then((r) => setStandings(r.data)).catch(() => {});
     }, []);
 
     const liveMatch = matches.find((m) => m.status === "live");
@@ -38,7 +39,7 @@ export default function Home() {
 
     const marqueeItems = announcements.length > 0
         ? announcements.map((a) => `${a.title} — ${a.body}`)
-        : ["TechnoKick 2026 is LIVE", "Register your team for PS5 FIFA Cup", "Submit daily predictions before 8PM IST"];
+        : ["TechnoKick 2026 is LIVE", "Register solo for the PS5 FIFA Cup", "Submit daily predictions before 8PM IST"];
 
     return (
         <div className="App min-h-screen bg-cream">
@@ -60,7 +61,7 @@ export default function Home() {
                         Win <span className="underline-wiggle">Big.</span>
                     </h1>
                     <p className="mt-6 font-body text-lg md:text-xl max-w-2xl text-ink/80">
-                        The inter-company FIFA showdown for Technopark. Conquer the PS5 bracket. Crush daily predictions. Earn bragging rights for your team.
+                        The inter-company FIFA showdown for Technopark. Get drawn into a group, conquer the PS5 knockouts, and crush daily predictions for campus glory.
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3 items-center">
                         <Countdown target={nextPS5Kickoff()} label="Next kickoff in" />
@@ -80,8 +81,8 @@ export default function Home() {
                         <div className="halftone-bg absolute -left-6 -bottom-6 w-32 h-32 opacity-60 rotate-12" />
                         <div className="relative">
                             <div className="font-mono text-xs uppercase tracking-[0.25em] text-teal mb-2">Module 01</div>
-                            <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase">PS5 FIFA<br/>Knockout</h2>
-                            <p className="mt-4 font-body text-ink/80">Register your 4-member team. Battle 1v1. Climb the bracket. ₹100 entry.</p>
+                            <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase">PS5 FIFA<br/>World Cup</h2>
+                            <p className="mt-4 font-body text-ink/80">Solo 1v1 showdown. Get drawn into a group — top your table, survive the knockouts. ₹100 entry.</p>
                             <div className="mt-6 flex items-center justify-between">
                                 <Countdown target={nextPS5Kickoff()} label="Kick-off" />
                                 <span className="btn-retro btn-brick !py-2 !px-4 !text-sm">Register →</span>
@@ -112,7 +113,7 @@ export default function Home() {
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                             <span className="font-heading text-2xl tracking-wider uppercase"><span className="live-dot" />LIVE NOW</span>
-                            <span className="font-body uppercase tracking-wide">{liveMatch.team_a} vs {liveMatch.team_b}</span>
+                            <span className="font-body uppercase tracking-wide">{liveMatch.player_a} vs {liveMatch.player_b}</span>
                             <span className="stamp">{liveMatch.round_label || "Match"}</span>
                         </div>
                         <div className="flex items-center gap-3">
@@ -123,17 +124,17 @@ export default function Home() {
                 </section>
             )}
 
-            {/* BRACKET / POINTS TOGGLE */}
+            {/* BRACKET / STANDINGS TOGGLE */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-16">
                 <div className="flex items-end justify-between mb-6 gap-3 flex-wrap">
-                    <h2 className="font-heading text-4xl md:text-5xl uppercase">Tournament <span className="text-brick">{view === "bracket" ? "Bracket" : "Standings"}</span></h2>
+                    <h2 className="font-heading text-4xl md:text-5xl uppercase">Tournament <span className="text-brick">{view === "bracket" ? "Wall Chart" : "Standings"}</span></h2>
                     <div className="inline-flex border-2 border-ink shadow-retro-sm">
-                        <button onClick={() => setView("bracket")} data-testid="view-bracket-btn" className={`px-4 py-2 font-heading text-sm uppercase tracking-wider ${view === "bracket" ? "bg-ink text-mustard" : "bg-white"}`}>Bracket</button>
-                        <button onClick={() => setView("points")} data-testid="view-points-btn" className={`px-4 py-2 font-heading text-sm uppercase tracking-wider border-l-2 border-ink ${view === "points" ? "bg-ink text-mustard" : "bg-white"}`}>Points Table</button>
+                        <button onClick={() => setView("bracket")} data-testid="view-bracket-btn" className={`px-4 py-2 font-heading text-sm uppercase tracking-wider ${view === "bracket" ? "bg-ink text-mustard" : "bg-white"}`}>Matches</button>
+                        <button onClick={() => setView("standings")} data-testid="view-points-btn" className={`px-4 py-2 font-heading text-sm uppercase tracking-wider border-l-2 border-ink ${view === "standings" ? "bg-ink text-mustard" : "bg-white"}`}>Group Standings</button>
                     </div>
                 </div>
 
-                {view === "bracket" ? <BracketView matches={matches} /> : <PointsTable points={points} />}
+                {view === "bracket" ? <BracketView matches={matches} /> : <GroupStandings standings={standings} />}
             </section>
 
             {/* UPCOMING SLOT */}
@@ -143,7 +144,7 @@ export default function Home() {
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <div className="font-mono text-[10px] uppercase tracking-widest opacity-60">Next Up</div>
-                                <div className="font-heading text-2xl md:text-3xl">{upcoming.team_a} <span className="text-brick">vs</span> {upcoming.team_b}</div>
+                                <div className="font-heading text-2xl md:text-3xl">{upcoming.player_a} <span className="text-brick">vs</span> {upcoming.player_b}</div>
                                 <div className="font-body text-sm opacity-70">{upcoming.round_label} · {upcoming.station} · {new Date(upcoming.scheduled_at).toLocaleString()}</div>
                             </div>
                             <span className="stamp stamp-teal">Upcoming</span>
@@ -153,97 +154,6 @@ export default function Home() {
             )}
 
             <Footer />
-        </div>
-    );
-}
-
-function BracketView({ matches }) {
-    if (!matches.length) {
-        return <div className="ticket p-8 text-center font-body opacity-70" data-testid="bracket-empty">Bracket coming soon. Stay tuned!</div>;
-    }
-    // Group by round_label
-    const order = ["Round of 16", "Quarterfinal", "Semifinal", "Final"];
-    const groups = {};
-    matches.forEach((m) => {
-        const k = m.round_label || "Group";
-        groups[k] = groups[k] || [];
-        groups[k].push(m);
-    });
-    const rounds = Object.keys(groups).sort((a, b) => {
-        const ai = order.indexOf(a); const bi = order.indexOf(b);
-        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    });
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 overflow-x-auto" data-testid="bracket-grid">
-            {rounds.map((r) => (
-                <div key={r} className="space-y-4">
-                    <h3 className="font-heading text-2xl uppercase border-b-2 border-ink pb-1">{r}</h3>
-                    {groups[r].map((m) => <MatchCard key={m.id} m={m} />)}
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function MatchCard({ m }) {
-    const statusColors = { live: "stamp-brick", completed: "stamp-ink", upcoming: "" };
-    return (
-        <div className={`retro-card retro-card-hover p-4 ${m.status === "live" ? "bg-mustard" : "bg-white"}`} data-testid={`match-card-${m.id}`}>
-            <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] uppercase tracking-widest opacity-70">{m.station}</span>
-                <span className={`stamp ${statusColors[m.status]} !text-[10px] !py-0.5 !px-2`}>{m.status === "live" ? <><span className="live-dot" />LIVE</> : m.status}</span>
-            </div>
-            <Row name={m.team_a} company={m.team_a_company} score={m.score_a} winner={m.winner === m.team_a} done={m.status === "completed"} />
-            <div className="text-center my-1 font-mono text-xs opacity-50">vs</div>
-            <Row name={m.team_b} company={m.team_b_company} score={m.score_b} winner={m.winner === m.team_b} done={m.status === "completed"} />
-            <div className="mt-2 text-[10px] font-mono opacity-60">
-                {new Date(m.scheduled_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-            </div>
-        </div>
-    );
-}
-
-function Row({ name, company, score, winner, done }) {
-    return (
-        <div className={`flex items-center justify-between py-1 ${done && !winner && name !== "Draw" ? "opacity-50" : ""}`}>
-            <div className="min-w-0">
-                <div className="font-heading text-lg leading-none truncate">{name}{winner && <span className="ml-2 text-brick">★</span>}</div>
-                <div className="font-mono text-[10px] uppercase opacity-60 truncate">{company}</div>
-            </div>
-            <span className="font-mono font-bold text-xl tabular-nums">{score}</span>
-        </div>
-    );
-}
-
-function PointsTable({ points }) {
-    if (!points.length) return <div className="ticket p-8 text-center opacity-70" data-testid="points-empty">No matches completed yet. Standings will appear here.</div>;
-    return (
-        <div className="retro-card overflow-x-auto" data-testid="points-table">
-            <table className="w-full font-body text-sm">
-                <thead className="bg-ink text-mustard">
-                    <tr className="text-left">
-                        {["#", "Company", "P", "W", "D", "L", "GF", "GA", "GD", "PTS"].map((h) => (
-                            <th key={h} className="px-3 py-2 font-heading uppercase tracking-wider text-xs">{h}</th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {points.map((r, i) => (
-                        <tr key={r.company} className="border-t-2 border-ink/10 hover:bg-mustard/20">
-                            <td className="px-3 py-2 font-mono font-bold">{i + 1}</td>
-                            <td className="px-3 py-2 font-bold">{r.company}</td>
-                            <td className="px-3 py-2 font-mono">{r.played}</td>
-                            <td className="px-3 py-2 font-mono">{r.won}</td>
-                            <td className="px-3 py-2 font-mono">{r.drawn}</td>
-                            <td className="px-3 py-2 font-mono">{r.lost}</td>
-                            <td className="px-3 py-2 font-mono">{r.gf}</td>
-                            <td className="px-3 py-2 font-mono">{r.ga}</td>
-                            <td className="px-3 py-2 font-mono">{r.gd}</td>
-                            <td className="px-3 py-2 font-mono font-bold text-brick">{r.points}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
         </div>
     );
 }
