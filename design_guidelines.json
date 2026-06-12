@@ -1,0 +1,152 @@
+{
+  "project_context": {
+    "name": "TechnoKick 2026",
+    "theme": "Light Mode with Retro-Football Poster Vibe",
+    "archetype": "Hybrid of Swiss High-Contrast & Organic Earthy (Retro Sports Edition)",
+    "description": "In-house engagement web app for Technopark employees during FIFA World Cup 2026."
+  },
+  "design_system": {
+    "colors": {
+      "background": {
+        "hex": "#F7F5F0",
+        "name": "Vintage Cream",
+        "usage": "Primary app background"
+      },
+      "foreground": {
+        "hex": "#0A0A0A",
+        "name": "Ink Black",
+        "usage": "Text, borders, solid drop shadows"
+      },
+      "primary": {
+        "hex": "#E23D28",
+        "name": "Brick Red",
+        "usage": "Primary CTAs, live indicators, key highlights"
+      },
+      "secondary": {
+        "hex": "#EAA81B",
+        "name": "Mustard Yellow",
+        "usage": "Secondary CTAs, badges, highlighting"
+      },
+      "accent": {
+        "hex": "#12515B",
+        "name": "Retro Deep Teal",
+        "usage": "Headers, PS5 Tournament theme color"
+      },
+      "surface": {
+        "hex": "#FFFFFF",
+        "name": "Pure White",
+        "usage": "Card backgrounds inside the cream canvas"
+      },
+      "muted": {
+        "hex": "#E2DDCF",
+        "name": "Newsprint Grey",
+        "usage": "Disabled states, secondary card backgrounds"
+      }
+    },
+    "typography": {
+      "fonts": {
+        "heading": "Anton, sans-serif",
+        "body": "Chivo, sans-serif",
+        "mono": "Space Mono, monospace"
+      },
+      "rules": {
+        "h1": "text-5xl md:text-6xl+ uppercase tracking-normal leading-none font-heading",
+        "h2": "text-3xl md:text-4xl uppercase tracking-normal font-heading",
+        "h3": "text-xl md:text-2xl uppercase tracking-normal font-heading",
+        "body": "text-base tracking-normal leading-relaxed font-body",
+        "labels": "text-xs font-bold uppercase tracking-widest font-body",
+        "numbers": "font-mono font-bold tracking-tighter"
+      }
+    },
+    "surfaces_and_shadows": {
+      "card_default": "bg-white border-2 border-foreground shadow-[6px_6px_0px_#0A0A0A] rounded-none",
+      "card_hover": "hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[10px_10px_0px_#0A0A0A] transition-transform duration-200",
+      "ticket_stub": "bg-white border-2 border-foreground shadow-[6px_6px_0px_#0A0A0A] relative before:content-[''] before:absolute before:w-6 before:h-6 before:bg-[#F7F5F0] before:border-r-2 before:border-foreground before:rounded-full before:-left-3 before:top-1/2 before:-translate-y-1/2",
+      "texture_overlay": "Apply a subtle SVG noise filter or halftone pattern image over large colored surfaces to achieve the vintage poster feel."
+    },
+    "components": {
+      "buttons": {
+        "primary": "bg-primary text-white font-heading text-xl md:text-2xl uppercase px-6 py-3 border-2 border-foreground shadow-[4px_4px_0px_#0A0A0A] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#0A0A0A] transition-all active:translate-y-1 active:shadow-none",
+        "secondary": "bg-secondary text-foreground font-heading text-xl md:text-2xl uppercase px-6 py-3 border-2 border-foreground shadow-[4px_4px_0px_#0A0A0A] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#0A0A0A] transition-all active:translate-y-1 active:shadow-none"
+      },
+      "inputs": {
+        "text": "bg-white border-2 border-foreground shadow-[4px_4px_0px_#0A0A0A] px-4 py-3 font-body focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary rounded-none transition-all",
+        "radio": "appearance-none w-5 h-5 border-2 border-foreground rounded-full checked:bg-primary checked:ring-2 checked:ring-foreground checked:ring-offset-2"
+      },
+      "badges": {
+        "default": "inline-block bg-accent text-white font-bold text-xs uppercase px-3 py-1 border-2 border-foreground transform -rotate-2 shadow-[2px_2px_0px_#0A0A0A]"
+      }
+    },
+    "layout_and_spacing": {
+      "philosophy": "Asymmetrical balance, dynamic diagonals, sticker/badge overlaps.",
+      "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+      "section_spacing": "py-16 md:py-24"
+    },
+    "motion_and_interactions": {
+      "hover": "Hard snappy translations, no soft fading. Elements pop out.",
+      "submit_action": "A visual 'stamp' or 'seal' slamming down on the page (scale down from 3x size to 1x, slight rotation, fast spring physics).",
+      "celebration": "Confetti overlay using primary and secondary colors on prediction win or correct answer."
+    }
+  },
+  "page_guidelines": {
+    "home_screen": {
+      "layout": "Grid-cols-1 md:grid-cols-2 gap-8 with overlapping 'sticker' elements.",
+      "features": "Two massive 'Ticket' cards for PS5 and Predictions. Scoreboard segment font for countdowns. A live tracking banner scrolling at the top (marquee)."
+    },
+    "ps5_tournament": {
+      "layout": "1970s geometric bracket. High contrast lines connecting matches.",
+      "features": "Match cards resemble matchday tickets. '🔴 LIVE NOW' blinking badge. Company points table styled like an old newspaper standings section."
+    },
+    "daily_prediction": {
+      "layout": "Vertical feed of match cards in the center.",
+      "features": "Questions styled as a betting slip. Yes/No radio buttons look like punch-holes. Score predictions use large bold inputs."
+    },
+    "user_dashboard": {
+      "layout": "Profile header styled as a credential badge/lanyard card.",
+      "features": "Prediction history displayed as a retro receipt. Badges (e.g., Giant Slayer) shown as embroidered patch graphics."
+    },
+    "admin_panel": {
+      "layout": "Sidebar navigation in Accent Teal, cream main area.",
+      "features": "Use custom Shadcn components but strip the soft shadows and rounded corners; replace with solid 2px borders and sharp corners."
+    }
+  },
+  "media_assets": {
+    "icons": {
+      "library": "phosphor-icons",
+      "style": "bold or duotone to match heavy ink lines"
+    },
+    "images": [
+      {
+        "category": "hero_background",
+        "url": "https://images.pexels.com/photos/1657324/pexels-photo-1657324.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Stadium at sunset - apply a heavy halftone filter and duotone (Brick Red/Teal) via CSS mix-blend-mode."
+      },
+      {
+        "category": "stadium_crowd",
+        "url": "https://images.pexels.com/photos/13069970/pexels-photo-13069970.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Vibrant stadium crowd - use for the 'Player of the Match' section background with Mustard Yellow overlay."
+      },
+      {
+        "category": "vintage_football",
+        "url": "https://images.pexels.com/photos/10821308/pexels-photo-10821308.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Close up vintage leather soccer ball - mask out background and use as a floating decorative element (sticker)."
+      },
+      {
+        "category": "paper_texture",
+        "url": "https://images.pexels.com/photos/7598248/pexels-photo-7598248.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Textured paper - apply globally as a fixed background with opacity 0.1 and mix-blend-multiply."
+      }
+    ]
+  },
+  "testing_attributes": {
+    "instructions": "All interactive elements MUST include data-testid. Examples: data-testid='login-button', data-testid='prediction-submit-button', data-testid='ps5-register-form'."
+  },
+  "instructions_to_main_agent": [
+    "Do NOT use standard soft shadows (shadow-md). ONLY use the custom hard shadows (shadow-[4px_4px_0px_#0A0A0A])",
+    "Do NOT use the Inter or Roboto fonts. Add Google Fonts Anton, Chivo, and Space Mono to index.html.",
+    "Implement the 'Ticket Cutout' using CSS pseudo-elements (before/after circles with background matching the canvas color).",
+    "Use raw Tailwind and HTML for public pages. Only use Shadcn (heavily styled to match the brutalist/retro look) for the Admin Dashboard and complex modals.",
+    "Mobile-first implementation is strictly required. Stacking on mobile should retain the heavy borders and ticket styles.",
+    "Use react-fast-marquee for the Announcements feed to give a retro news-ticker vibe."
+  ]
+}
