@@ -36,8 +36,7 @@ export default function AdminLogin() {
                         <span className="stamp stamp-ink">Committee Access</span>
                         <h1 className="font-heading text-5xl mt-3 uppercase">Admin <span className="text-brick">Console</span></h1>
                     </div>
-                    <form onSubmit={submit} className="retro-card p-6 md:p-8 bg-white" data-testid="admin-login-form">
-                        <div className="space-y-4">
+                    <form onSubmit={submit} className="retro-card p-6 md:p-8 bg-white" data-testid="admin-login-form">                        <div className="space-y-4">
                             <div>
                                 <label className="label-retro">Email</label>
                                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-retro" data-testid="admin-email-input" />
@@ -46,10 +45,13 @@ export default function AdminLogin() {
                                 <label className="label-retro">Password</label>
                                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="input-retro" data-testid="admin-password-input" />
                             </div>
-                            {err && <div className="bg-brick text-white p-3 border-2 border-ink font-bold text-sm" data-testid="admin-login-error">{err}</div>}
+                            {err && <div className="bg-brick text-white p-3 border-2 border-ink font-bold text-sm" data-testid="admin-login-error">{err} — double-check your full email (e.g. admin@technokick.com) and password.</div>}
                             <button disabled={loading} className="btn-retro btn-ink w-full" data-testid="admin-login-submit">
                                 {loading ? "Authenticating…" : "Enter Console →"}
                             </button>
+                            <div className="bg-cream border-2 border-ink p-3 font-body text-xs" data-testid="admin-login-hint">
+                                🔑 Committee access only. Use your <strong>full email address</strong> (including the domain, e.g. <strong>admin@technokick.com</strong>). Trouble logging in? Mail <a href="mailto:hr@mav-s.com" className="underline font-bold">hr@mav-s.com</a>.
+                            </div>
                         </div>
                     </form>
                 </div>

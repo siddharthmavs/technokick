@@ -9,6 +9,7 @@ import logging
 import io
 import math
 import random
+import itertools
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal, Any
 
@@ -504,10 +505,11 @@ async def admin_set_group(reg_id: str, payload: dict, _: dict = Depends(require_
 
 @api_router.post("/admin/groups/auto-assign")
 async def admin_auto_assign_groups(payload: Optional[dict] = None, _: dict = Depends(require_admin)):
-    """Shuffle registered players into groups of `group_size` — FIFA draw style."""
+    """Shuffle registered players into groups — FIFA draw style — and auto-generate round-robin group fixtures."""
     payload = payload or {}
     group_size = max(2, int(payload.get("group_size", 4)))
     only_confirmed = bool(payload.get("only_confirmed", False))
+    generate_fixtures = bool(payload.get("generate_fixtures", True))
     query = {"payment_status": "confirmed"} if only_confirmed else {}
     regs = await db.ps5_registrations.find(query, {"_id": 0}).to_list(2000)
     if not regs:
@@ -515,9 +517,37 @@ async def admin_auto_assign_groups(payload: Optional[dict] = None, _: dict = Dep
     random.shuffle(regs)
     num_groups = math.ceil(len(regs) / group_size)
     letters = [chr(ord("A") + i) for i in range(num_groups)]
+    grouped: dict[str, list] = {letter: [] for letter in letters}
     for i, reg in enumerate(regs):
-        await db.ps5_registrations.update_one({"id": reg["id"]}, {"$set": {"group": letters[i % num_groups]}})
-    return {"ok": True, "groups": num_groups, "players": len(regs)}
+        letter = letters[i % num_groups]
+        grouped[letter].append(reg)
+        await db.ps5_registrations.update_one({"id": reg["id"]}, {"$set": {"group": letter}})
+
+    matches_created = 0
+    if generate_fixtures:
+        # Old group-stage matches belong to the previous draw — wipe and regenerate
+        await db.ps5_matches.delete_many({"round_label": {"$regex": "^Group"}})
+        pairs = []
+        for letter in letters:
+            for a, b in itertools.combinations(grouped[letter], 2):
+                pairs.append((letter, a, b))
+        base = (now_utc() + timedelta(days=1)).replace(hour=13, minute=30, second=0, microsecond=0)  # tomorrow 7PM IST
+        slots_per_day = 4
+        for idx, (letter, a, b) in enumerate(pairs):
+            scheduled = base + timedelta(days=idx // slots_per_day, minutes=(idx % slots_per_day) * 45)
+            await db.ps5_matches.insert_one({
+                "id": str(uuid.uuid4()),
+                "round_label": f"Group {letter}",
+                "player_a": a["player_name"], "player_a_company": a.get("company_name", ""),
+                "player_b": b["player_name"], "player_b_company": b.get("company_name", ""),
+                "station": f"Station {(idx % 2) + 1}",
+                "scheduled_at": scheduled.isoformat(),
+                "score_a": 0, "score_b": 0, "status": "upcoming",
+                "winner": None, "player_of_match": None,
+                "created_at": now_utc().isoformat(),
+            })
+            matches_created += 1
+    return {"ok": True, "groups": num_groups, "players": len(regs), "matches_created": matches_created}
 
 
 @api_router.get("/admin/registrations/export")
@@ -697,6 +727,7 @@ DEFAULT_TNC = """\
 7. **Code of Conduct**: Be respectful. Trash talk in good fun only. Cheating = disqualification.
 8. **No-show**: 5-minute grace, then walkover (3-0 default) awarded to opponent.
 9. **Withdrawal**: Allowed until the group draw is published. Post draw, contact the committee.
+10. **Help Desk**: For anything related to the games — payments, scheduling, disputes — contact the committee (HR, MAVS Innovation) at hr@mav-s.com.
 """
 
 

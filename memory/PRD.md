@@ -32,11 +32,17 @@ In-house engagement platform for Technopark employees during the FIFA World Cup 
 ## Testing Status
 - Iteration 1 (2026-06-12): backend 33/33, frontend 18/18 flows PASS. Minor issues found (stale T&C, window not enforced, optional payload, option hydration warning) — all fixed and re-verified.
 
+## Update 2026-06-12 (round 2) ✅
+- Admin login "401" investigated: API verified working with admin@technokick.com/admin123 — added clear hint + better error on /admin/login (full email required).
+- 🎲 Run the Draw now ALSO auto-generates the full round-robin group schedule (wipes old group-stage matches, schedules from next day 7PM IST, 45-min slots, alternating Stations 1/2). Verified via curl: 8 players → 2 groups → 12 matches. Regression 33/33 pass.
+- MAVS Innovation branding: logo (/public/mavs-logo.png) + "Presented by MAVS Innovation" in footer, "BY MAVS INNOVATION" in header tagline, committee note on admin login.
+- Games Help Desk hr@mav-s.com added: footer mailto, FAQ entry, PS5 payment instructions, T&C rule #10 (DB refreshed).
+- Hero: spinning ball removed → World Cup trophy polaroid ("THE CUP · 2026" + WIN IT stamp).
+
 ## Backlog
 - P1: Profile avatars / customization for users.
 - P2: Tie-breaker logic for prediction leaderboard ties.
 - P2: Refactor server.py monolith into routers/ + models.py (noted by code review; ~880 lines).
-- P2: Auto-generate group round-robin fixtures after the draw (currently admin schedules manually).
 
 ## Credentials
 See /app/memory/test_credentials.md (admin@technokick.com / admin123; users via any phone+name).

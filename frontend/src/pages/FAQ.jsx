@@ -36,6 +36,10 @@ const FAQS = [
         a: "You get a 5-minute grace period. After that it's a 3-0 walkover for your opponent. Don't be that player.",
     },
     {
+        q: "Who do I contact for help?",
+        a: "The games committee is run by HR at MAVS Innovation. For anything related to the games — payments, scheduling, disputes, withdrawals — mail the help desk at hr@mav-s.com.",
+    },
+    {
         q: "What do winners get?",
         a: "Campus-wide bragging rights, your name on the Hall of Fame, and prizes announced by the committee. The real trophy is the fear in your colleagues' eyes.",
     },

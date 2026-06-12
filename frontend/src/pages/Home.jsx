@@ -8,7 +8,7 @@ import { nextPS5Kickoff, predictionWindowClose, isPredictionWindowOpen } from ".
 import api from "../lib/api";
 import { useAuth } from "../lib/auth";
 
-const heroFootball = "https://images.pexels.com/photos/10821308/pexels-photo-10821308.jpeg?auto=compress&cs=tinysrgb&w=800";
+const trophyImg = "https://images.pexels.com/photos/32221015/pexels-photo-32221015.jpeg?auto=compress&cs=tinysrgb&w=800";
 const stadiumImg = "https://images.pexels.com/photos/1657324/pexels-photo-1657324.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
 export default function Home() {
@@ -68,8 +68,14 @@ export default function Home() {
                         <span className="font-mono text-xs uppercase tracking-widest opacity-70">· 7:00 PM IST</span>
                     </div>
                 </div>
-                {/* floating ball sticker */}
-                <img src={heroFootball} alt="" className="hidden md:block absolute -bottom-10 -right-10 w-64 h-64 object-cover rounded-full border-4 border-ink shadow-retro-lg ball-spin" />
+                {/* world cup trophy poster sticker */}
+                <div className="hidden md:block absolute bottom-6 right-6 rotate-[3deg]">
+                    <div className="relative border-4 border-ink shadow-retro-lg bg-white p-2 pb-8">
+                        <img src={trophyImg} alt="The World Cup trophy" className="w-56 h-64 object-cover" data-testid="hero-trophy-img" />
+                        <div className="absolute bottom-1 left-0 right-0 text-center font-heading uppercase tracking-widest text-ink text-lg">The Cup · 2026</div>
+                        <span className="stamp stamp-brick absolute -top-3 -left-3 rotate-[-8deg]">WIN IT</span>
+                    </div>
+                </div>
             </section>
 
             {/* TWO HERO CARDS */}
@@ -161,9 +167,19 @@ export default function Home() {
 export function Footer() {
     return (
         <footer className="border-t-2 border-ink bg-ink text-cream py-8 relative z-10" data-testid="site-footer">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between gap-3">
-                <div className="font-heading text-2xl">TECHNOKICK · 2026</div>
-                <div className="font-mono text-xs uppercase tracking-widest opacity-70">Made with ⚽ for the Technopark campus</div>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between gap-5">
+                <div>
+                    <div className="font-heading text-2xl">TECHNOKICK · 2026</div>
+                    <div className="font-mono text-xs uppercase tracking-widest opacity-70">Made with ⚽ for the Technopark campus</div>
+                </div>
+                <a href="mailto:hr@mav-s.com" className="group" data-testid="helpdesk-link">
+                    <div className="font-mono text-[10px] uppercase tracking-widest opacity-60">Games Help Desk · Committee</div>
+                    <div className="font-body font-bold text-mustard underline group-hover:text-cream">hr@mav-s.com</div>
+                </a>
+                <div className="flex items-center gap-3 border-l-2 border-cream/20 pl-5" data-testid="mavs-branding">
+                    <img src="/mavs-logo.png" alt="MAVS Innovation" className="h-10 w-10 object-cover object-left border-2 border-cream/30" />
+                    <div className="font-mono text-[10px] uppercase tracking-widest opacity-80 leading-relaxed">Presented by<br /><span className="text-mustard font-bold">MAVS Innovation</span></div>
+                </div>
             </div>
         </footer>
     );

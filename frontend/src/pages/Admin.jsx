@@ -85,10 +85,10 @@ function RegistrationsTab() {
         try { await api.patch(`/admin/registrations/${id}/group`, { group: g }); toast.success(g ? `Moved to Group ${g}` : "Removed from group"); load(); } catch (e) { err(e); }
     };
     const autoAssign = async () => {
-        if (!window.confirm(`Run the draw? Players will be shuffled into groups of ${size}. Existing group assignments will be replaced.`)) return;
+        if (!window.confirm(`Run the draw? Players will be shuffled into groups of ${size}, and the full round-robin group schedule will be auto-generated (existing group-stage matches are replaced).`)) return;
         try {
             const r = await api.post("/admin/groups/auto-assign", { group_size: Number(size) });
-            toast.success(`🎉 Draw complete: ${r.data.players} players → ${r.data.groups} groups`);
+            toast.success(`🎉 Draw complete: ${r.data.players} players → ${r.data.groups} groups · ${r.data.matches_created} group matches scheduled`);
             load();
         } catch (e) { err(e); }
     };
@@ -111,7 +111,7 @@ function RegistrationsTab() {
                     <span className="font-heading uppercase text-lg">World Cup Draw:</span>
                     <span className="font-mono text-xs uppercase">Players per group</span>
                     <input type="number" min="2" max="8" value={size} onChange={(e) => setSize(e.target.value)} className="input-retro !w-16 text-center" data-testid="group-size-input" />
-                    <button onClick={autoAssign} className="btn-retro btn-brick !text-xs !py-2 !px-3" data-testid="auto-assign-btn">🎲 Run the Draw</button>
+                    <button onClick={autoAssign} className="btn-retro btn-brick !text-xs !py-2 !px-3" data-testid="auto-assign-btn">🎲 Run the Draw + Schedule</button>
                 </div>
                 <button onClick={exportXlsx} className="btn-retro btn-ink !text-xs !py-2 !px-3" data-testid="export-regs-btn">⬇ Export Excel</button>
             </div>

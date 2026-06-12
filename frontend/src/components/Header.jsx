@@ -17,7 +17,7 @@ export default function Header() {
                     </div>
                     <div>
                         <div className="font-heading text-2xl md:text-3xl text-ink leading-none">TECHNOKICK</div>
-                        <div className="font-mono text-[10px] tracking-widest text-teal">2026 · WORLD CUP CAMPUS CUP</div>
+                        <div className="font-mono text-[10px] tracking-widest text-teal">2026 · WORLD CUP · BY MAVS INNOVATION</div>
                     </div>
                 </Link>
 
