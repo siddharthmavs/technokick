@@ -8,7 +8,7 @@ import { formatApiError } from "../lib/api";
 export default function AdminLogin() {
     const { loginAdmin } = useAuth();
     const navigate = useNavigate();
-    const [email, setEmail] = useState("admin@technokick.com");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [err, setErr] = useState("");
     const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ export default function AdminLogin() {
                                 {loading ? "Authenticating…" : "Enter Console →"}
                             </button>
                             <div className="bg-cream border-2 border-ink p-3 font-body text-xs" data-testid="admin-login-hint">
-                                🔑 Committee access only. Use your <strong>full email address</strong> (including the domain, e.g. <strong>admin@technokick.com</strong>). Trouble logging in? Mail <a href="mailto:hr@mav-s.com" className="underline font-bold">hr@mav-s.com</a>.
+                                Committee access only. Trouble logging in? Contact <a href="mailto:hr@mav-s.com" className="underline font-bold">hr@mav-s.com</a>.
                             </div>
                         </div>
                     </form>
