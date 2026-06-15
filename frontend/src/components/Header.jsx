@@ -24,8 +24,11 @@ export default function Header() {
                         TK
                     </div>
                     <div>
+                        <div className="flex items-center gap-2">
                         <div className="font-heading text-2xl md:text-3xl text-ink leading-none">TECHNOKICK</div>
-                        <div className="font-mono text-[10px] tracking-widest text-teal">2026 · WORLD CUP · BY MAVS INNOVATION</div>
+                        <img src="/mavs-logo.png"  alt="The World Cup trophy" className="h-10 w-[120px] object-cover object-left border-2 border-cream/30" data-testid="logo-trophy-img" />
+                        </div>
+                        <div className="font-mono text-[10px] tracking-widest text-teal">2026 · WORLD CUP · BY MAV-S INNOVATION</div>
                     </div>
                 </Link>
 

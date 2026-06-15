@@ -799,7 +799,7 @@ DEFAULT_TNC = """\
 7. **Code of Conduct**: Be respectful. Trash talk in good fun only. Cheating = disqualification.
 8. **No-show**: 5-minute grace, then walkover (3-0 default) awarded to opponent.
 9. **Withdrawal**: Allowed until the group draw is published. Post draw, contact the committee.
-10. **Help Desk**: For anything related to the games — payments, scheduling, disputes — contact the committee (HR, MAVS Innovation) at hr@mav-s.com.
+10. **Help Desk**: For anything related to the games — payments, scheduling, disputes — contact the committee (HR, MAV-S Innovation) at hr@mav-s.com.
 """
 
 

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -m pip install -r /tmp/reqs_local.txt)",
+      "Bash(yarn install:*)",
+      "Bash(python -m pip install --no-deps -r /tmp/reqs_local.txt)"
+    ]
+  }
+}

@@ -9,7 +9,6 @@ import { nextPS5Kickoff, predictionWindowClose, isPredictionWindowOpen } from ".
 import api from "../lib/api";
 import { useAuth } from "../lib/auth";
 
-const trophyImg = "https://images.pexels.com/photos/32221015/pexels-photo-32221015.jpeg?auto=compress&cs=tinysrgb&w=800";
 const stadiumImg = "https://images.pexels.com/photos/1657324/pexels-photo-1657324.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
 export default function Home() {
@@ -38,9 +37,16 @@ export default function Home() {
         else navigate("/predict");
     };
 
-    const marqueeItems = announcements.length > 0
-        ? announcements.map((a) => `${a.title} — ${a.body}`)
-        : ["TechnoKick 2026 is LIVE", "Register solo for the PS5 FIFA Cup", "Submit daily predictions before 8PM IST"];
+const marqueeItems = announcements.length > 0
+  ? [
+      ...announcements.map((a) => `${a.title} — ${a.body}`),
+      "Messi is the GOAT 🐐",
+    ]
+  : [
+      "TechnoKick 2026 is LIVE",
+      "Register solo for the PS5 FIFA Cup",
+      "Submit daily predictions before 8PM IST",
+    ];
 
     return (
         <div className="App min-h-screen bg-cream">
@@ -50,7 +56,7 @@ export default function Home() {
 
             {/* HERO */}
             <section className="relative overflow-hidden border-b-2 border-ink">
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url(${stadiumImg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'sepia(0.6) contrast(1.2)' }} />
+                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url(${"/bgwc1.jpg"})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'sepia(0.6) contrast(1.2)' }} />
                 <div className="absolute inset-0 halftone-light pointer-events-none" />
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-20">
                     <div className="flex items-center gap-3 mb-4">
@@ -73,7 +79,7 @@ export default function Home() {
                 {/* world cup trophy poster sticker */}
                 <div className="hidden md:block absolute bottom-6 right-6 rotate-[3deg]">
                     <div className="relative border-4 border-ink shadow-retro-lg bg-white p-2 pb-8">
-                        <img src={trophyImg} alt="The World Cup trophy" className="w-56 h-64 object-cover" data-testid="hero-trophy-img" />
+                        <img src="/world-cup-2026.png" alt="The World Cup trophy" className="w-56 h-64 object-cover" data-testid="hero-trophy-img" />
                         <div className="absolute bottom-1 left-0 right-0 text-center font-heading uppercase tracking-widest text-ink text-lg">The Cup · 2026</div>
                         <span className="stamp stamp-brick absolute -top-3 -left-3 rotate-[-8deg]">WIN IT</span>
                     </div>
@@ -85,10 +91,9 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* PS5 Card */}
                     <button onClick={onPS5Click} className="text-left retro-card retro-card-hover p-6 md:p-8 relative overflow-hidden group" data-testid="ps5-card">
-                        <div className="absolute -top-4 -right-4 stamp stamp-brick rotate-[8deg]">PS5 · FIFA</div>
+                        <div className="absolute top-4 right-4 stamp stamp-brick rotate-[8deg]">PS5 · FIFA</div>
                         <div className="halftone-bg absolute -left-6 -bottom-6 w-32 h-32 opacity-60 rotate-12" />
                         <div className="relative">
-                            <div className="font-mono text-xs uppercase tracking-[0.25em] text-teal mb-2">Module 01</div>
                             <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase">PS5 FIFA<br/>World Cup</h2>
                             <p className="mt-4 font-body text-ink/80">Solo 1v1 showdown. Get drawn into a group — top your table, survive the knockouts. ₹100 entry.</p>
                             <div className="mt-6 flex items-center justify-between">
@@ -100,10 +105,9 @@ export default function Home() {
 
                     {/* Prediction Card */}
                     <button onClick={onPredictClick} className="text-left retro-card retro-card-hover p-6 md:p-8 relative overflow-hidden bg-mustard" data-testid="predict-card">
-                        <div className="absolute -top-4 -right-4 stamp stamp-teal rotate-[8deg]">DAILY · LIVE</div>
+                        <div className="absolute top-4 right-4 stamp stamp-teal rotate-[8deg]">DAILY · LIVE</div>
                         <div className="absolute inset-0 stripes-bg opacity-[0.06]" />
                         <div className="relative">
-                            <div className="font-mono text-xs uppercase tracking-[0.25em] text-teal mb-2">Module 02</div>
                             <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase text-ink">Daily<br/>Prediction</h2>
                             <p className="mt-4 font-body text-ink/80">4 questions a day on real World Cup matches. Window: 10AM–8PM IST. Score = glory.</p>
                             <div className="mt-6 flex items-center justify-between">
@@ -179,8 +183,8 @@ export function Footer() {
                     <div className="font-body font-bold text-mustard underline group-hover:text-cream">hr@mav-s.com</div>
                 </a>
                 <div className="flex items-center gap-3 border-l-2 border-cream/20 pl-5" data-testid="mavs-branding">
-                    <img src="/mavs-logo.png" alt="MAVS Innovation" className="h-10 w-10 object-cover object-left border-2 border-cream/30" />
-                    <div className="font-mono text-[10px] uppercase tracking-widest opacity-80 leading-relaxed">Presented by<br /><span className="text-mustard font-bold">MAVS Innovation</span></div>
+                    <img src="/mavs-logo.png" alt="MAV-S Innovation" className="h-10 w-10 object-cover object-left border-2 border-cream/30" />
+                    <div className="font-mono text-[10px] uppercase tracking-widest opacity-80 leading-relaxed">Presented by<br /><span className="text-mustard font-bold">MAV-S Innovation</span></div>
                 </div>
             </div>
         </footer>
