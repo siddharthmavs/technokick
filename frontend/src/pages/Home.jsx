@@ -81,7 +81,7 @@ const marqueeItems = announcements.length > 0
                     <div className="relative border-4 border-ink shadow-retro-lg bg-white p-2 pb-8">
                         <img src="/world-cup-2026.png" alt="The World Cup trophy" className="w-56 h-64 object-cover" data-testid="hero-trophy-img" />
                         <div className="absolute bottom-1 left-0 right-0 text-center font-heading uppercase tracking-widest text-ink text-lg">The Cup · 2026</div>
-                        <span className="stamp stamp-brick absolute -top-3 -left-3 rotate-[-8deg]">WIN IT</span>
+                        <span className="stamp stamp-brick absolute -top-3 -left-3 rotate-[-8deg]">WIN EXCITING PRIZES</span>
                     </div>
                 </div>
             </section>
@@ -95,7 +95,7 @@ const marqueeItems = announcements.length > 0
                         <div className="halftone-bg absolute -left-6 -bottom-6 w-32 h-32 opacity-60 rotate-12" />
                         <div className="relative">
                             <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase">PS5 FIFA<br/>World Cup</h2>
-                            <p className="mt-4 font-body text-ink/80">Solo 1v1 showdown. Get drawn into a group — top your table, survive the knockouts. ₹100 entry.</p>
+                            <p className="mt-4 font-body text-ink/80">Solo 1v1 showdown. Get drawn into a group — top your table, survive the knockouts. ₹100 entry. Win Exciting Prizes!</p>
                             <div className="mt-6 flex items-center justify-between">
                                 <Countdown target={nextPS5Kickoff()} label="Kick-off" />
                                 <span className="btn-retro btn-brick !py-2 !px-4 !text-sm">Register →</span>
@@ -109,7 +109,7 @@ const marqueeItems = announcements.length > 0
                         <div className="absolute inset-0 stripes-bg opacity-[0.06]" />
                         <div className="relative">
                             <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase text-ink">Daily<br/>Prediction</h2>
-                            <p className="mt-4 font-body text-ink/80">4 questions a day on real World Cup matches. Window: 10AM–8PM IST. Score = glory.</p>
+                            <p className="mt-4 font-body text-ink/80">4 questions a day on real World Cup matches. Window: 10AM–8PM IST. Score = glory. Win Exciting Prizes!</p>
                             <div className="mt-6 flex items-center justify-between">
                                 <Countdown target={predictionWindowClose()} label={isPredictionWindowOpen() ? "Closes in" : "Opens in"} />
                                 <span className="btn-retro btn-ink !py-2 !px-4 !text-sm">Play →</span>
