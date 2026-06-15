@@ -21,7 +21,7 @@ export default function Login() {
         setErr("");
         setLoading(true);
         try {
-            await loginUser(phone.trim(), name.trim(), company.trim() || undefined);
+            await loginUser(phone.trim(), name.trim(), company.trim());
             navigate(next, { replace: true });
         } catch (e) {
             setErr(formatApiError(e.response?.data?.detail) || e.message);
@@ -52,8 +52,8 @@ export default function Login() {
                                 <input value={name} onChange={(e) => setName(e.target.value)} required className="input-retro" placeholder="Rohan K" data-testid="login-name-input" />
                             </div>
                             <div>
-                                <label className="label-retro">Company (optional)</label>
-                                <input value={company} onChange={(e) => setCompany(e.target.value)} className="input-retro" placeholder="Infosys / UST / TCS …" data-testid="login-company-input" />
+                                <label className="label-retro">Company</label>
+                                <input value={company} onChange={(e) => setCompany(e.target.value)} required className="input-retro" placeholder="MAV-S / UST / TCS …" data-testid="login-company-input" />
                             </div>
                             {err && <div className="bg-brick text-white p-3 border-2 border-ink font-bold text-sm" data-testid="login-error">{err}</div>}
                             <button disabled={loading} className="btn-retro btn-brick w-full" data-testid="login-submit-btn">

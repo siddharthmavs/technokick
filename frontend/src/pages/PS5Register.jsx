@@ -99,7 +99,7 @@ export default function PS5Register() {
 
                             {reg.payment_status !== "confirmed" && (
                                 <div className="mt-5 bg-mustard border-2 border-ink p-3 font-body text-sm font-bold" data-testid="payment-instructions">
-                                    💰 Pay ₹100 at the committee desk (TC Building, Ground Floor). Your stamp flips to PAID once confirmed. Questions? Mail the committee: <a href="mailto:hr@mav-s.com" className="underline">hr@mav-s.com</a>
+                                    💰 Pay ₹100 at the committee desk (Kabani Building 2nd floor MAV-S Innovations). Your stamp flips to PAID once confirmed. Questions? Mail the committee: <a href="mailto:hr@mav-s.com" className="underline">hr@mav-s.com</a>
                                 </div>
                             )}
 
