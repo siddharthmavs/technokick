@@ -56,14 +56,15 @@ const marqueeItems = announcements.length > 0
 
             {/* HERO */}
             <section className="relative overflow-hidden border-b-2 border-ink">
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url(${"/bgwc1.jpg"})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'sepia(0.6) contrast(1.2)' }} />
+                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url(${"/bgwc1.jpg"})`, backgroundSize: 'cover', backgroundPosition: 'center bottom', filter: 'sepia(0.6) contrast(1.2)' }} />
+                <div className="absolute inset-0 bg-gradient-to-b from-cream/70 via-cream/20 to-transparent pointer-events-none" />
                 <div className="absolute inset-0 halftone-light pointer-events-none" />
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-20">
                     <div className="flex items-center gap-3 mb-4">
                         <span className="stamp stamp-brick" data-testid="hero-tag">FIFA WORLD CUP · 2026</span>
                         <span className="stamp">TECHNOPARK CAMPUS</span>
                     </div>
-                    <h1 className="font-heading text-6xl md:text-8xl lg:text-9xl leading-[0.85] uppercase text-ink">
+                    <h1 className="font-heading text-5xl sm:text-6xl md:text-8xl lg:text-9xl leading-[0.85] uppercase text-ink">
                         Play <span className="text-brick">Hard.</span><br/>
                         Predict <span className="text-teal">Bold.</span><br/>
                         Win <span className="underline-wiggle">Big.</span>
@@ -73,7 +74,7 @@ const marqueeItems = announcements.length > 0
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3 items-center">
                         <Countdown target={nextPS5Kickoff()} label="Next kickoff in" />
-                        <span className="font-mono text-xs uppercase tracking-widest opacity-70">· 7:00 PM IST</span>
+                        <span className="font-mono text-xs uppercase tracking-widest opacity-70 whitespace-nowrap">· 7:00 PM IST</span>
                     </div>
                 </div>
                 {/* world cup trophy poster sticker */}
@@ -152,12 +153,12 @@ const marqueeItems = announcements.length > 0
             {/* UPCOMING SLOT */}
             {upcoming && (
                 <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-12">
-                    <div className="ticket p-6 mx-2 md:mx-8">
+                    <div className="ticket next-up-glow p-6 mx-2 md:mx-8">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <div className="font-mono text-[10px] uppercase tracking-widest opacity-60">Next Up</div>
                                 <div className="font-heading text-2xl md:text-3xl">{upcoming.player_a} <span className="text-brick">vs</span> {upcoming.player_b}</div>
-                                <div className="font-body text-sm opacity-70">{upcoming.round_label} · {upcoming.station} · {new Date(upcoming.scheduled_at).toLocaleString()}</div>
+                                <div className="font-body text-sm opacity-70">{upcoming.round_label} · {upcoming.station} · {new Date(upcoming.scheduled_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</div>
                             </div>
                             <span className="stamp stamp-teal">Upcoming</span>
                         </div>

@@ -10,29 +10,35 @@ export function roundCompare(a, b) {
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
 }
 
-function PlayerRow({ name, company, score, winner, done }) {
+function PlayerRow({ name, company, score, winner, done, showScore }) {
     return (
         <div className={`flex items-center justify-between py-1 ${done && !winner && name !== "Draw" ? "opacity-50" : ""}`}>
             <div className="min-w-0">
                 <div className="font-heading text-lg leading-none truncate">{name}{winner && <span className="ml-2 text-brick">★</span>}</div>
                 <div className="font-mono text-[10px] uppercase opacity-60 truncate">{company}</div>
             </div>
-            <span className="font-mono font-bold text-xl tabular-nums">{score}</span>
+            {showScore && <span className="font-mono font-bold text-xl tabular-nums">{score}</span>}
         </div>
     );
 }
 
 export function MatchCard({ m }) {
     const statusColors = { live: "stamp-brick", completed: "stamp-ink", upcoming: "" };
+    const isBigRound = ["Semifinal", "Final", "Third Place"].includes(m.round_label);
+    const isTBD = m.player_a === "TBD" || m.player_b === "TBD";
+    const showScore = m.status !== "upcoming";
     return (
-        <div className={`retro-card retro-card-hover p-4 ${m.status === "live" ? "bg-mustard" : "bg-white"}`} data-testid={`match-card-${m.id}`}>
+        <div
+            className={`retro-card retro-card-hover p-4 anim-scroll ${m.status === "live" ? "bg-mustard" : "bg-white"} ${isBigRound ? "match-card-big" : ""} ${isTBD ? "match-card-tbd" : ""}`}
+            data-testid={`match-card-${m.id}`}
+        >
             <div className="flex items-center justify-between mb-2">
                 <span className="font-mono text-[10px] uppercase tracking-widest opacity-70">{m.station}</span>
                 <span className={`stamp ${statusColors[m.status]} !text-[10px] !py-0.5 !px-2`}>{m.status === "live" ? <><span className="live-dot" />LIVE</> : m.status}</span>
             </div>
-            <PlayerRow name={m.player_a} company={m.player_a_company} score={m.score_a} winner={m.winner === m.player_a} done={m.status === "completed"} />
+            <PlayerRow name={m.player_a} company={m.player_a_company} score={m.score_a} winner={m.winner === m.player_a} done={m.status === "completed"} showScore={showScore} />
             <div className="text-center my-1 font-mono text-xs opacity-50">vs</div>
-            <PlayerRow name={m.player_b} company={m.player_b_company} score={m.score_b} winner={m.winner === m.player_b} done={m.status === "completed"} />
+            <PlayerRow name={m.player_b} company={m.player_b_company} score={m.score_b} winner={m.winner === m.player_b} done={m.status === "completed"} showScore={showScore} />
             <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-mono opacity-70">
                 <span>{new Date(m.scheduled_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</span>
                 {m.player_of_match && <span className="text-brick font-bold truncate">★ MOTM: {m.player_of_match}</span>}

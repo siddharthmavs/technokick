@@ -350,3 +350,95 @@ body::before {
         display: contents !important;
     }
 }
+
+/* ============ Scroll-reveal entrance animation ============ */
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+        .anim-scroll {
+            animation: fadeSlideUp linear both;
+            animation-timeline: view();
+            animation-range: entry 0% entry 30%;
+        }
+    }
+}
+
+/* ============ NEXT UP card pulse glow ============ */
+@keyframes nextUpGlow {
+    0%, 100% {
+        box-shadow: 6px 6px 0 var(--ink);
+    }
+    50% {
+        box-shadow: 6px 6px 0 var(--ink), 0 0 28px rgba(234, 168, 27, 0.5);
+    }
+}
+.next-up-glow {
+    animation: nextUpGlow 2.4s ease-in-out infinite;
+}
+
+/* ============ Big-round match cards (Semifinal / Final / Third Place) ============ */
+.match-card-big {
+    border: 3px solid var(--brick) !important;
+    box-shadow: 8px 8px 0 var(--brick) !important;
+}
+.match-card-big:hover {
+    box-shadow: 12px 12px 0 var(--brick) !important;
+}
+
+/* ============ TBD placeholder match cards ============ */
+.match-card-tbd {
+    border-style: dashed !important;
+    opacity: 0.6;
+}
+
+/* ============ Marquee: pause on hover ============ */
+.marquee:hover .marquee-inner {
+    animation-play-state: paused;
+    cursor: default;
+}
+
+/* ============ Keyboard focus states (WCAG AA) ============ */
+:focus-visible {
+    outline: 3px solid var(--brick);
+    outline-offset: 2px;
+}
+.btn-retro:focus-visible {
+    outline: 3px solid var(--brick);
+    outline-offset: 3px;
+}
+.input-retro:focus-visible {
+    outline: 3px solid var(--brick);
+    outline-offset: 0;
+}
+
+/* ============ Mobile responsive (375px – 428px) ============ */
+@media (max-width: 428px) {
+    /* Ticket notches don't bleed beyond narrow viewports */
+    .ticket::before {
+        left: -8px;
+        width: 16px;
+        height: 16px;
+    }
+    .ticket::after {
+        right: -8px;
+        width: 16px;
+        height: 16px;
+    }
+    /* Keep the marquee readable on tiny screens */
+    .marquee-inner {
+        animation-duration: 28s;
+    }
+    /* Bracket grid: single column by default already, just guard against overflow */
+    [data-testid="bracket-grid"] {
+        overflow-x: hidden;
+    }
+}
