@@ -54,9 +54,9 @@ export default function Header() {
                     ) : (
                         <>
                             <Link to="/login" className="btn-retro btn-brick !text-xs !py-2 !px-3" data-testid="login-btn">Login</Link>
-                            {!onAdmin && (
+                            {/* {!onAdmin && (
                                 <Link to="/admin/login" className="btn-retro !text-xs !py-2 !px-3 hidden sm:inline-flex" data-testid="admin-login-link">Admin</Link>
-                            )}
+                            )} */}
                         </>
                     )}
                 </div>
