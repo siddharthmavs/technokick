@@ -25,7 +25,15 @@ export function nextPS5Kickoff() {
     return target;
 }
 
-/** Return today's 8PM IST close (14:30 UTC) */
+/** Return today's 10AM IST open (4:30 UTC) — next occurrence if already past */
+export function predictionWindowOpen() {
+    const now = new Date();
+    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 4, 30, 0));
+    if (now.getTime() > target.getTime()) target.setUTCDate(target.getUTCDate() + 1);
+    return target;
+}
+
+/** Return today's 8PM IST close (14:30 UTC) — next occurrence if already past */
 export function predictionWindowClose() {
     const now = new Date();
     const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 14, 30, 0));
@@ -37,4 +45,11 @@ export function isPredictionWindowOpen() {
     const now = new Date();
     const h = now.getUTCHours() + now.getUTCMinutes() / 60;
     return h >= 4.5 && h <= 14.5; // 10AM to 8PM IST in UTC
+}
+
+// July 5 2026, 23:59 IST = 18:29 UTC
+export const PS5_REG_DEADLINE = new Date(Date.UTC(2026, 6, 5, 18, 30, 0));
+
+export function isPS5RegOpen() {
+    return new Date() < PS5_REG_DEADLINE;
 }

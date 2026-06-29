@@ -5,7 +5,7 @@ import Marquee from "../components/Marquee";
 import Countdown from "../components/Countdown";
 import PushPrompt from "../components/PushPrompt";
 import { BracketView, GroupStandings } from "../components/PS5";
-import { nextPS5Kickoff, predictionWindowClose, isPredictionWindowOpen } from "../lib/time";
+import { nextPS5Kickoff, predictionWindowOpen, predictionWindowClose, isPredictionWindowOpen, PS5_REG_DEADLINE, useCountdown } from "../lib/time";
 import api from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -27,6 +27,7 @@ export default function Home() {
 
     const liveMatch = matches.find((m) => m.status === "live");
     const upcoming = matches.find((m) => m.status === "upcoming");
+    const regCd = useCountdown(PS5_REG_DEADLINE);
 
     const onPS5Click = () => {
         if (!user) navigate("/login?next=/ps5/terms");
@@ -40,7 +41,7 @@ export default function Home() {
 const marqueeItems = announcements.length > 0
   ? [
       ...announcements.map((a) => `${a.title} — ${a.body}`),
-      "Messi is the GOAT 🐐",
+      "Messi is the GOAT 🐐", "Iam Back Iam going Back"
     ]
   : [
       "TechnoKick 2026 is LIVE",
@@ -98,8 +99,16 @@ const marqueeItems = announcements.length > 0
                             <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase">PS5 FIFA<br/>World Cup</h2>
                             <p className="mt-4 font-body text-ink/80">Solo 1v1 showdown. Get drawn into a group — top your table, survive the knockouts. ₹100 entry. Win Exciting Prizes!</p>
                             <div className="mt-6 flex items-center justify-between">
-                                <Countdown target={nextPS5Kickoff()} label="Kick-off" />
-                                <span className="btn-retro btn-brick !py-2 !px-4 !text-sm">Register →</span>
+                                {regCd.expired ? (
+                                    <span className="stamp stamp-brick">Registration Closed</span>
+                                ) : (
+                                    <Countdown target={PS5_REG_DEADLINE} label="Reg. closes in" />
+                                )}
+                                {regCd.expired ? (
+                                    <span className="btn-retro !py-2 !px-4 !text-sm opacity-50 cursor-default">Closed</span>
+                                ) : (
+                                    <span className="btn-retro btn-brick !py-2 !px-4 !text-sm">Register →</span>
+                                )}
                             </div>
                         </div>
                     </button>
@@ -112,7 +121,7 @@ const marqueeItems = announcements.length > 0
                             <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase text-ink">Daily<br/>Prediction</h2>
                             <p className="mt-4 font-body text-ink/80">4 questions a day on real World Cup matches. Window: 10AM–8PM IST. Score = glory. Win Exciting Prizes!</p>
                             <div className="mt-6 flex items-center justify-between">
-                                <Countdown target={predictionWindowClose()} label={isPredictionWindowOpen() ? "Closes in" : "Opens in"} />
+                                <Countdown target={isPredictionWindowOpen() ? predictionWindowClose() : predictionWindowOpen()} label={isPredictionWindowOpen() ? "Closes in" : "Opens in"} />
                                 <span className="btn-retro btn-ink !py-2 !px-4 !text-sm">Play →</span>
                             </div>
                         </div>

@@ -4,6 +4,8 @@ import Header from "../components/Header";
 import { Footer } from "./Home";
 import api from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { PS5_REG_DEADLINE, useCountdown } from "../lib/time";
+import Countdown from "../components/Countdown";
 
 function MarkdownLite({ text }) {
     return (
@@ -22,6 +24,7 @@ export default function PS5Terms() {
     const { user } = useAuth();
     const [content, setContent] = useState("");
     const [accepted, setAccepted] = useState(false);
+    const regCd = useCountdown(PS5_REG_DEADLINE);
 
     useEffect(() => {
         api.get("/settings/tnc").then((r) => setContent(r.data.content)).catch(() => {});
@@ -43,6 +46,18 @@ export default function PS5Terms() {
                         <p className="font-body opacity-70 mt-2">Read it. Accept it. Then claim your spot in the draw.</p>
                     </div>
 
+                    {regCd.expired ? (
+                        <div className="border-2 border-brick bg-brick/10 p-4 mb-6 flex items-center gap-3" data-testid="reg-closed-banner">
+                            <span className="stamp stamp-brick shrink-0">CLOSED</span>
+                            <p className="font-body text-sm font-bold">Registration for the PS5 FIFA World Cup has closed. No new entries are being accepted.</p>
+                        </div>
+                    ) : (
+                        <div className="border-2 border-ink bg-mustard p-3 mb-6 flex items-center justify-between gap-3 flex-wrap" data-testid="reg-deadline-banner">
+                            <p className="font-mono text-xs uppercase tracking-widest font-bold">⏳ Registration closes · 5 July 2026</p>
+                            <Countdown target={PS5_REG_DEADLINE} label="Time left" />
+                        </div>
+                    )}
+
                     <div className="retro-card bg-white p-6 md:p-8" data-testid="tnc-content">
                         <MarkdownLite text={content || "Loading the rulebook…"} />
                     </div>
@@ -52,8 +67,8 @@ export default function PS5Terms() {
                         <span className="font-body text-sm font-bold">I've read the rulebook and I accept the Terms & Conditions. Bring on the draw!</span>
                     </label>
 
-                    <button onClick={proceed} disabled={!accepted} className="btn-retro btn-brick w-full mt-6 disabled:opacity-40 disabled:cursor-not-allowed" data-testid="tnc-proceed-btn">
-                        Accept & Register →
+                    <button onClick={proceed} disabled={!accepted || regCd.expired} className="btn-retro btn-brick w-full mt-6 disabled:opacity-40 disabled:cursor-not-allowed" data-testid="tnc-proceed-btn">
+                        {regCd.expired ? "Registration Closed" : "Accept & Register →"}
                     </button>
                 </div>
             </div>

@@ -443,8 +443,8 @@ async def predictions_history(user: dict = Depends(get_current_user)):
 @api_router.get("/predictions/leaderboard")
 async def predictions_leaderboard():
     pipe = [
-        {"$group": {"_id": "$user_id", "points": {"$sum": "$points_earned"}, "submissions": {"$sum": 1}}},
-        {"$sort": {"points": -1}},
+        {"$group": {"_id": "$user_id", "points": {"$sum": "$points_earned"}, "submissions": {"$sum": 1}, "first_submitted": {"$min": "$submitted_at"}}},
+        {"$sort": {"points": -1, "first_submitted": 1}},
         {"$limit": 10},
     ]
     rows = await db.submissions.aggregate(pipe).to_list(20)
@@ -457,6 +457,7 @@ async def predictions_leaderboard():
             "company": users.get(r["_id"], {}).get("company", ""),
             "points": r["points"],
             "submissions": r["submissions"],
+            "first_submitted": r.get("first_submitted"),
         }
         for r in rows
     ]

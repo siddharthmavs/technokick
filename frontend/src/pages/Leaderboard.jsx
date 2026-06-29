@@ -24,6 +24,7 @@ export default function Leaderboard() {
                     <span className="stamp stamp-brick">Prediction League · Top 10</span>
                     <h1 className="font-heading text-5xl md:text-7xl mt-3 uppercase">Hall of <span className="underline-wiggle">Fame</span></h1>
                     <p className="font-body opacity-70 mt-2">The sharpest football brains on campus. Could be you.</p>
+                    <p className="font-mono text-[11px] uppercase tracking-widest opacity-60 mt-2">Ties broken by earliest submission time ⏱</p>
                 </div>
 
                 {rows === null ? (
@@ -43,6 +44,7 @@ export default function Leaderboard() {
                                 if (!p) return <div key={idx} className="w-28 md:w-44" />;
                                 const heights = ["h-44 md:h-56", "h-32 md:h-44", "h-24 md:h-36"];
                                 const bgs = ["bg-mustard", "bg-white", "bg-white"];
+                                const isTied = idx > 0 && podium[idx - 1] && podium[idx - 1].points === p.points;
                                 return (
                                     <div key={p.user_id} className="flex flex-col items-center w-28 md:w-44" data-testid={`podium-${idx + 1}`}>
                                         <div className="text-4xl md:text-5xl mb-2">{MEDALS[idx]}</div>
@@ -51,6 +53,7 @@ export default function Leaderboard() {
                                         <div className={`w-full ${heights[idx]} ${bgs[idx]} border-2 border-ink shadow-retro-sm flex flex-col items-center justify-center`}>
                                             <span className="font-heading text-3xl md:text-5xl text-brick">{p.points}</span>
                                             <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">points</span>
+                                            {isTied && <span className="font-mono text-[9px] uppercase tracking-widest opacity-50 mt-1">⏱ tiebreak</span>}
                                         </div>
                                     </div>
                                 );
@@ -69,15 +72,22 @@ export default function Leaderboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {rest.map((r, i) => (
-                                            <tr key={r.user_id} className="border-t-2 border-ink/10 hover:bg-mustard/20">
-                                                <td className="px-4 py-2 font-mono font-bold">{i + 4}</td>
-                                                <td className="px-4 py-2 font-bold">{r.name}</td>
-                                                <td className="px-4 py-2 font-mono text-xs uppercase opacity-70">{r.company || "—"}</td>
-                                                <td className="px-4 py-2 font-mono">{r.submissions}</td>
-                                                <td className="px-4 py-2 font-mono font-bold text-brick">{r.points}</td>
-                                            </tr>
-                                        ))}
+                                        {rest.map((r, i) => {
+                                            const allRows = rows || [];
+                                            const prev = allRows[i + 3 - 1];
+                                            const isTied = prev && prev.points === r.points;
+                                            return (
+                                                <tr key={r.user_id} className="border-t-2 border-ink/10 hover:bg-mustard/20">
+                                                    <td className="px-4 py-2 font-mono font-bold">{i + 4}</td>
+                                                    <td className="px-4 py-2 font-bold">{r.name}</td>
+                                                    <td className="px-4 py-2 font-mono text-xs uppercase opacity-70">{r.company || "—"}</td>
+                                                    <td className="px-4 py-2 font-mono">{r.submissions}</td>
+                                                    <td className="px-4 py-2 font-mono font-bold text-brick">
+                                                        {r.points}{isTied && <span className="ml-1 text-[10px] opacity-50">⏱</span>}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

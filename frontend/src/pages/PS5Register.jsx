@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import { Footer } from "./Home";
 import api, { formatApiError } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { PS5_REG_DEADLINE, useCountdown } from "../lib/time";
 
 export default function PS5Register() {
     const { user } = useAuth();
@@ -13,6 +14,18 @@ export default function PS5Register() {
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState({ player_name: "", company_name: "", contact: "" });
     const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState({});
+    const regCd = useCountdown(PS5_REG_DEADLINE);
+
+    const validate = (f) => {
+        const e = {};
+        if (!f.player_name.trim()) e.player_name = "Player name is required.";
+        else if (f.player_name.trim().length < 2) e.player_name = "Must be at least 2 characters.";
+        if (!f.company_name.trim()) e.company_name = "Company name is required.";
+        if (!f.contact.trim()) e.contact = "Contact number is required.";
+        else if (!/^\d{10}$/.test(f.contact.trim())) e.contact = "Enter a valid 10-digit mobile number.";
+        return e;
+    };
 
     useEffect(() => {
         api.get("/ps5/registrations/mine")
@@ -26,15 +39,19 @@ export default function PS5Register() {
 
     const submit = async (e) => {
         e.preventDefault();
+        const errs = validate(form);
+        if (Object.keys(errs).length) { setErrors(errs); return; }
+        setErrors({});
+        const trimmed = { player_name: form.player_name.trim(), company_name: form.company_name.trim(), contact: form.contact.trim() };
         setSaving(true);
         try {
             if (reg) {
-                const r = await api.put("/ps5/registrations/mine", form);
+                const r = await api.put("/ps5/registrations/mine", trimmed);
                 setReg(r.data);
                 setEditing(false);
                 toast.success("Registration updated!");
             } else {
-                const r = await api.post("/ps5/registrations", form);
+                const r = await api.post("/ps5/registrations", trimmed);
                 setReg(r.data);
                 toast.success("You're in! Pay ₹100 at the committee desk to confirm your spot.");
             }
@@ -43,6 +60,11 @@ export default function PS5Register() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const onBlur = (field) => {
+        const errs = validate(form);
+        setErrors((prev) => ({ ...prev, [field]: errs[field] }));
     };
 
     const withdraw = async () => {
@@ -71,7 +93,13 @@ export default function PS5Register() {
                         <p className="font-body opacity-70 mt-2">Individual 1v1 tournament. You'll be drawn into a group — World Cup style.</p>
                     </div>
 
-                    {reg && !editing ? (
+                    {regCd.expired && !reg ? (
+                        <div className="ticket p-8 text-center" data-testid="reg-closed-card">
+                            <span className="stamp stamp-brick text-xl">Registration Closed</span>
+                            <p className="font-body mt-4 opacity-70">The PS5 FIFA World Cup registration window ended on <strong>5 July 2026</strong>. New entries are no longer accepted.</p>
+                            <p className="font-body text-sm mt-3 opacity-60">Questions? Mail the committee: <a href="mailto:hr@mav-s.com" className="underline">hr@mav-s.com</a></p>
+                        </div>
+                    ) : reg && !editing ? (
                         <div className="ticket p-6 md:p-8" data-testid="registration-ticket">
                             <div className="flex items-center justify-between mb-4">
                                 <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">Player Pass · PS5 FIFA World Cup</span>
@@ -116,15 +144,18 @@ export default function PS5Register() {
                             <div className="space-y-4">
                                 <div>
                                     <label className="label-retro">Player Name</label>
-                                    <input value={form.player_name} onChange={(e) => setForm({ ...form, player_name: e.target.value })} required className="input-retro" placeholder="Your in-game identity" data-testid="reg-player-name-input" />
+                                    <input value={form.player_name} onChange={(e) => setForm({ ...form, player_name: e.target.value })} onBlur={() => onBlur("player_name")} className={`input-retro ${errors.player_name ? "border-brick" : ""}`} placeholder="Your in-game identity" data-testid="reg-player-name-input" />
+                                    {errors.player_name && <p className="font-mono text-[11px] text-brick mt-1" data-testid="err-player-name">{errors.player_name}</p>}
                                 </div>
                                 <div>
                                     <label className="label-retro">Company</label>
-                                    <input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} required className="input-retro" placeholder="Infosys / UST / TCS …" data-testid="reg-company-input" />
+                                    <input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} onBlur={() => onBlur("company_name")} className={`input-retro ${errors.company_name ? "border-brick" : ""}`} placeholder="Infosys / UST / TCS …" data-testid="reg-company-input" />
+                                    {errors.company_name && <p className="font-mono text-[11px] text-brick mt-1" data-testid="err-company-name">{errors.company_name}</p>}
                                 </div>
                                 <div>
                                     <label className="label-retro">Contact Number</label>
-                                    <input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} required className="input-retro" placeholder="9876543210" data-testid="reg-contact-input" />
+                                    <input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} onBlur={() => onBlur("contact")} className={`input-retro ${errors.contact ? "border-brick" : ""}`} placeholder="9876543210" maxLength={10} data-testid="reg-contact-input" />
+                                    {errors.contact && <p className="font-mono text-[11px] text-brick mt-1" data-testid="err-contact">{errors.contact}</p>}
                                 </div>
                                 <div className="bg-cream border-2 border-ink p-3 font-body text-xs">
                                     ⚽ <strong>How it works:</strong> Register solo → committee draws groups (like the World Cup) → round-robin in your group → top 2 advance to knockouts.

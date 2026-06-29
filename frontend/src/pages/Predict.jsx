@@ -43,6 +43,14 @@ export default function Predict() {
 
     const fixtures = {};
     (data?.fixtures || []).forEach((f) => { fixtures[f.id] = f; });
+    const alreadySubmitted = Object.keys(data?.submissions || {}).length > 0;
+
+    const submitLabel = () => {
+        if (saving) return "Locking in…";
+        if (alreadySubmitted) return "Already Submitted ✓";
+        if (!windowOpen) return "Window Closed — Back at 10AM IST";
+        return "Lock In My Predictions →";
+    };
 
     return (
         <div className="App min-h-screen bg-cream">
@@ -68,12 +76,14 @@ export default function Predict() {
                     ) : (
                         <div className="space-y-6">
                             {data.questions.map((q, i) => (
-                                <QuestionCard key={q.id} q={q} index={i} fixture={fixtures[q.fixture_id]} value={answers[q.id]} onChange={(v) => setAns(q.id, v)} submission={data.submissions?.[q.id]} />
+                                <QuestionCard key={q.id} q={q} index={i} fixture={fixtures[q.fixture_id]} value={answers[q.id]} onChange={(v) => setAns(q.id, v)} submission={data.submissions?.[q.id]} locked={alreadySubmitted} />
                             ))}
-                            <button onClick={submit} disabled={saving || !windowOpen} className="btn-retro btn-brick w-full disabled:opacity-40 disabled:cursor-not-allowed" data-testid="predictions-submit-btn">
-                                {saving ? "Locking in…" : windowOpen ? "Lock In My Predictions →" : "Window Closed — Back at 10AM IST"}
+                            <button onClick={submit} disabled={saving || !windowOpen || alreadySubmitted} className="btn-retro btn-brick w-full disabled:opacity-40 disabled:cursor-not-allowed" data-testid="predictions-submit-btn">
+                                {submitLabel()}
                             </button>
-                            <p className="font-mono text-[10px] uppercase tracking-widest text-center opacity-60">You can edit your answers until the window closes at 8PM IST</p>
+                            {!alreadySubmitted && windowOpen && (
+                                <p className="font-mono text-[10px] uppercase tracking-widest text-center opacity-60">Your answers are final once you submit.</p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -93,7 +103,7 @@ function FixtureBanner({ f }) {
     );
 }
 
-function QuestionCard({ q, index, fixture, value, onChange, submission }) {
+function QuestionCard({ q, index, fixture, value, onChange, submission, locked }) {
     const scored = q.results_entered;
     return (
         <div className="retro-card bg-white p-5" data-testid={`question-card-${index}`}>
@@ -108,31 +118,31 @@ function QuestionCard({ q, index, fixture, value, onChange, submission }) {
             {scored ? (
                 <ScoredResult q={q} submission={submission} />
             ) : (
-                <AnswerInput q={q} value={value} onChange={onChange} index={index} />
+                <AnswerInput q={q} value={value} onChange={onChange} index={index} locked={locked} />
             )}
         </div>
     );
 }
 
-function AnswerInput({ q, value, onChange, index }) {
+function AnswerInput({ q, value, onChange, index, locked }) {
     if (q.type === "numeric_score") {
         const v = value || {};
         return (
             <div className="flex items-center gap-3" data-testid={`answer-numeric-${index}`}>
-                <input type="number" min="0" max="20" value={v.a ?? ""} onChange={(e) => onChange({ ...v, a: e.target.value === "" ? "" : Number(e.target.value) })} className="input-retro !w-20 text-center font-mono text-xl" placeholder="0" data-testid={`score-a-input-${index}`} />
+                <input type="number" min="0" max="20" value={v.a ?? ""} onChange={(e) => !locked && onChange({ ...v, a: e.target.value === "" ? "" : Number(e.target.value) })} readOnly={locked} className={`input-retro !w-20 text-center font-mono text-xl ${locked ? "opacity-60 cursor-not-allowed" : ""}`} placeholder="0" data-testid={`score-a-input-${index}`} />
                 <span className="font-heading text-2xl">—</span>
-                <input type="number" min="0" max="20" value={v.b ?? ""} onChange={(e) => onChange({ ...v, b: e.target.value === "" ? "" : Number(e.target.value) })} className="input-retro !w-20 text-center font-mono text-xl" placeholder="0" data-testid={`score-b-input-${index}`} />
+                <input type="number" min="0" max="20" value={v.b ?? ""} onChange={(e) => !locked && onChange({ ...v, b: e.target.value === "" ? "" : Number(e.target.value) })} readOnly={locked} className={`input-retro !w-20 text-center font-mono text-xl ${locked ? "opacity-60 cursor-not-allowed" : ""}`} placeholder="0" data-testid={`score-b-input-${index}`} />
                 <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">Exact score = bonus points!</span>
             </div>
         );
     }
     if (q.type === "multi_select") {
         const sel = Array.isArray(value) ? value : [];
-        const toggle = (opt) => onChange(sel.includes(opt) ? sel.filter((o) => o !== opt) : [...sel, opt]);
+        const toggle = (opt) => !locked && onChange(sel.includes(opt) ? sel.filter((o) => o !== opt) : [...sel, opt]);
         return (
             <div className="flex flex-wrap gap-2" data-testid={`answer-multi-${index}`}>
                 {q.options.map((opt) => (
-                    <button key={opt} type="button" onClick={() => toggle(opt)} className={`px-3 py-2 border-2 border-ink font-body font-bold text-sm transition-colors ${sel.includes(opt) ? "bg-teal text-white shadow-retro-sm" : "bg-white hover:bg-mustard/40"}`} data-testid={`option-${index}-${opt.replace(/\s/g, "-")}`}>
+                    <button key={opt} type="button" onClick={() => toggle(opt)} disabled={locked} className={`px-3 py-2 border-2 border-ink font-body font-bold text-sm transition-colors ${sel.includes(opt) ? "bg-teal text-white shadow-retro-sm" : "bg-white"} ${locked ? "opacity-60 cursor-not-allowed" : "hover:bg-mustard/40"}`} data-testid={`option-${index}-${opt.replace(/\s/g, "-")}`}>
                         {sel.includes(opt) ? "✓ " : ""}{opt}
                     </button>
                 ))}
@@ -143,7 +153,7 @@ function AnswerInput({ q, value, onChange, index }) {
     return (
         <div className="flex flex-wrap gap-2" data-testid={`answer-choice-${index}`}>
             {q.options.map((opt) => (
-                <button key={opt} type="button" onClick={() => onChange(opt)} className={`px-4 py-2 border-2 border-ink font-body font-bold text-sm transition-colors ${value === opt ? "bg-ink text-mustard shadow-retro-sm" : "bg-white hover:bg-mustard/40"}`} data-testid={`option-${index}-${opt.replace(/\s/g, "-")}`}>
+                <button key={opt} type="button" onClick={() => !locked && onChange(opt)} disabled={locked} className={`px-4 py-2 border-2 border-ink font-body font-bold text-sm transition-colors ${value === opt ? "bg-ink text-mustard shadow-retro-sm" : "bg-white"} ${locked ? "opacity-60 cursor-not-allowed" : "hover:bg-mustard/40"}`} data-testid={`option-${index}-${opt.replace(/\s/g, "-")}`}>
                     {opt}
                 </button>
             ))}
