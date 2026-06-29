@@ -4,7 +4,7 @@ import Header from "../components/Header";
 import Countdown from "../components/Countdown";
 import { Footer } from "./Home";
 import api, { formatApiError } from "../lib/api";
-import { predictionWindowClose, isPredictionWindowOpen } from "../lib/time";
+import { predictionWindowOpen, predictionWindowClose, isPredictionWindowOpen } from "../lib/time";
 
 export default function Predict() {
     const [data, setData] = useState(null);
@@ -61,7 +61,7 @@ export default function Predict() {
                         <span className="stamp stamp-teal">Daily Predictions · {data?.date || ""}</span>
                         <h1 className="font-heading text-5xl md:text-6xl mt-3 uppercase">Call <span className="text-brick">The Shots</span></h1>
                         <div className="mt-3 flex items-center justify-center gap-3 flex-wrap">
-                            <Countdown target={predictionWindowClose()} label={windowOpen ? "Window closes in" : "Window opens in"} />
+                            <Countdown target={windowOpen ? predictionWindowClose() : predictionWindowOpen()} label={windowOpen ? "Window closes in" : "Window opens in"} />
                             <span className={`stamp ${windowOpen ? "stamp-teal" : "stamp-brick"}`} data-testid="window-status">{windowOpen ? "OPEN" : "CLOSED"}</span>
                         </div>
                     </div>
