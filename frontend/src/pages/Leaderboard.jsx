@@ -5,16 +5,29 @@ import { Footer } from "./Home";
 import api from "../lib/api";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
+const PAGE_SIZE = 20;
 
 export default function Leaderboard() {
     const [rows, setRows] = useState(null);
+    const [fullPage, setFullPage] = useState(1);
+    const [fullData, setFullData] = useState(null);
+    const [fullLoading, setFullLoading] = useState(false);
 
     useEffect(() => {
         api.get("/predictions/leaderboard").then((r) => setRows(r.data)).catch(() => setRows([]));
     }, []);
 
+    useEffect(() => {
+        setFullLoading(true);
+        api.get(`/predictions/leaderboard/full?page=${fullPage}&page_size=${PAGE_SIZE}`)
+            .then((r) => setFullData(r.data))
+            .catch(() => setFullData({ total: 0, page: 1, page_size: PAGE_SIZE, rows: [] }))
+            .finally(() => setFullLoading(false));
+    }, [fullPage]);
+
     const podium = (rows || []).slice(0, 3);
     const rest = (rows || []).slice(3);
+    const totalPages = fullData ? Math.max(1, Math.ceil(fullData.total / PAGE_SIZE)) : 1;
 
     return (
         <div className="App min-h-screen bg-cream">
@@ -94,6 +107,59 @@ export default function Leaderboard() {
                             </div>
                         )}
                     </>
+                )}
+
+                {/* FULL RANKINGS — PAGINATED */}
+                {rows !== null && rows.length > 0 && (
+                    <section className="mt-16" data-testid="full-rankings-section">
+                        <div className="flex items-end justify-between gap-3 flex-wrap mb-4">
+                            <h2 className="font-heading text-3xl md:text-4xl uppercase">Full <span className="text-brick">Rankings</span></h2>
+                            {fullData && <span className="font-mono text-xs uppercase tracking-widest opacity-60">{fullData.total} players total</span>}
+                        </div>
+
+                        <div className="retro-card bg-white overflow-x-auto max-w-3xl mx-auto" data-testid="full-rankings-table">
+                            <table className="w-full font-body text-sm">
+                                <thead className="bg-ink text-mustard">
+                                    <tr className="text-left">
+                                        {["Rank", "Player", "Company", "Predictions", "PTS"].map((h) => (
+                                            <th key={h} className="px-4 py-2 font-heading uppercase tracking-wider text-xs">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {fullLoading ? (
+                                        <tr><td colSpan="5" className="px-4 py-8 text-center opacity-60 font-heading uppercase animate-pulse">Loading…</td></tr>
+                                    ) : fullData?.rows.length ? (
+                                        fullData.rows.map((r) => (
+                                            <tr key={r.user_id} className="border-t-2 border-ink/10 hover:bg-mustard/20" data-testid={`full-rank-row-${r.rank}`}>
+                                                <td className="px-4 py-2 font-mono font-bold">#{r.rank}</td>
+                                                <td className="px-4 py-2 font-bold">{r.name}</td>
+                                                <td className="px-4 py-2 font-mono text-xs uppercase opacity-70">{r.company || "—"}</td>
+                                                <td className="px-4 py-2 font-mono">{r.submissions}</td>
+                                                <td className="px-4 py-2 font-mono font-bold text-brick">{r.points}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan="5" className="px-4 py-8 text-center opacity-60">No players on this page.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-3 mt-5" data-testid="full-rankings-pagination">
+                                <button onClick={() => setFullPage((p) => Math.max(1, p - 1))} disabled={fullPage <= 1 || fullLoading} className="btn-retro !text-xs !py-2 !px-3 disabled:opacity-40 disabled:cursor-not-allowed" data-testid="pagination-prev-btn">
+                                    ← Prev
+                                </button>
+                                <span className="font-mono text-xs uppercase tracking-widest opacity-70" data-testid="pagination-status">
+                                    Page {fullPage} of {totalPages}
+                                </span>
+                                <button onClick={() => setFullPage((p) => Math.min(totalPages, p + 1))} disabled={fullPage >= totalPages || fullLoading} className="btn-retro !text-xs !py-2 !px-3 disabled:opacity-40 disabled:cursor-not-allowed" data-testid="pagination-next-btn">
+                                    Next →
+                                </button>
+                            </div>
+                        )}
+                    </section>
                 )}
             </div>
             <Footer />

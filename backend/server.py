@@ -515,6 +515,44 @@ async def predictions_leaderboard():
     ]
 
 
+@api_router.get("/predictions/leaderboard/full")
+async def predictions_leaderboard_full(page: int = 1, page_size: int = 20):
+    page = max(1, page)
+    page_size = max(1, min(page_size, 100))
+    skip = (page - 1) * page_size
+    pipe = [
+        {"$group": {"_id": "$user_id", "points": {"$sum": "$points_earned"}, "submissions": {"$sum": 1}, "first_submitted": {"$min": "$submitted_at"}}},
+        {"$sort": {"points": -1, "first_submitted": 1}},
+        {"$facet": {
+            "rows": [{"$skip": skip}, {"$limit": page_size}],
+            "total": [{"$count": "count"}],
+        }},
+    ]
+    result = await db.submissions.aggregate(pipe).to_list(1)
+    data = result[0] if result else {"rows": [], "total": []}
+    rows = data["rows"]
+    total = data["total"][0]["count"] if data["total"] else 0
+
+    user_ids = [r["_id"] for r in rows]
+    users = {u["id"]: u for u in await db.users.find({"id": {"$in": user_ids}}, {"_id": 0, "password_hash": 0}).to_list(200)}
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "rows": [
+            {
+                "rank": skip + i + 1,
+                "user_id": r["_id"],
+                "name": users.get(r["_id"], {}).get("name", "Unknown"),
+                "company": users.get(r["_id"], {}).get("company", ""),
+                "points": r["points"],
+                "submissions": r["submissions"],
+            }
+            for i, r in enumerate(rows)
+        ],
+    }
+
+
 # ---------- Announcements ----------
 @api_router.get("/announcements")
 async def list_announcements():
