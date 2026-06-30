@@ -209,7 +209,7 @@ class QuestionIn(BaseModel):
     date: str  # YYYY-MM-DD
     fixture_id: str
     text: str
-    type: Literal["dropdown", "numeric_score", "multi_select", "radio"]
+    type: Literal["dropdown", "numeric_score", "multi_select", "radio", "text"]
     options: List[str] = Field(default_factory=list)
     points: int = 10
     order: int = 0
@@ -727,7 +727,7 @@ async def admin_enter_result(qid: str, data: QuestionResultIn, _: dict = Depends
                 earned = 5 * len(correct_set & user_set)
             except Exception:
                 earned = 0
-        else:  # dropdown, radio
+        else:  # dropdown, radio, text — case-insensitive exact match
             if ans is not None and str(ans).strip().lower() == str(correct).strip().lower():
                 earned = points_per
         await db.submissions.update_one({"_id": s["_id"]}, {"$set": {"points_earned": earned}})

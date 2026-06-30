@@ -149,6 +149,20 @@ function AnswerInput({ q, value, onChange, index, locked }) {
             </div>
         );
     }
+    if (q.type === "text") {
+        return (
+            <input
+                type="text"
+                value={value || ""}
+                onChange={(e) => !locked && onChange(e.target.value)}
+                readOnly={locked}
+                maxLength={60}
+                className={`input-retro ${locked ? "opacity-60 cursor-not-allowed" : ""}`}
+                placeholder="Type your answer…"
+                data-testid={`answer-text-${index}`}
+            />
+        );
+    }
     // dropdown / radio
     return (
         <div className="flex flex-wrap gap-2" data-testid={`answer-choice-${index}`}>

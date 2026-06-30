@@ -194,8 +194,8 @@ export function Footer() {
                     <a href="mailto:aswathy.br@mav-s.com" className="font-body font-bold text-mustard underline hover:text-cream block">aswathy.br@mav-s.com</a>
                 </div>
                 <div className="flex items-center gap-3 border-l-2 border-cream/20 pl-5" data-testid="mavs-branding">
-                    <img src="/mavs-logo.png" alt="MAV-S Innovation" className="h-10 w-10 object-cover object-left border-2 border-cream/30" />
-                    <div className="font-mono text-[10px] uppercase tracking-widest opacity-80 leading-relaxed">Presented by<br /><span className="text-mustard font-bold">MAV-S Innovation</span></div>
+                    <img src="/mavs-logo.png" alt="MAV-S Innovations" className="h-10 w-10 object-cover object-left border-2 border-cream/30" />
+                    <div className="font-mono text-[10px] uppercase tracking-widest opacity-80 leading-relaxed">Presented by<br /><span className="text-mustard font-bold">MAV-S Innovations</span></div>
                 </div>
             </div>
         </footer>

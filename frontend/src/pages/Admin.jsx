@@ -327,7 +327,7 @@ function QuestionsTab() {
                 ...form,
                 points: Number(form.points),
                 order: Number(form.order),
-                options: form.type === "numeric_score" ? [] : form.type === "radio" ? ["Yes", "No"] : form.options.split(",").map((s) => s.trim()).filter(Boolean),
+                options: form.type === "numeric_score" || form.type === "text" ? [] : form.type === "radio" ? ["Yes", "No"] : form.options.split(",").map((s) => s.trim()).filter(Boolean),
             });
             toast.success("Question published!");
             setForm({ ...empty, fixture_id: form.fixture_id });
@@ -357,20 +357,26 @@ function QuestionsTab() {
                         <label className="label-retro">Type</label>
                         <select value={form.type} onChange={(e) => {
                             const t = e.target.value;
-                            setForm({ ...form, type: t, options: t === "radio" ? "Yes, No" : t === "numeric_score" ? "" : form.options });
+                            setForm({ ...form, type: t, options: t === "radio" ? "Yes, No" : t === "numeric_score" || t === "text" ? "" : form.options });
                         }} className="input-retro" data-testid="question-type-select">
                             <option value="dropdown">Dropdown (single pick)</option>
                             <option value="radio">Yes / No (radio)</option>
                             <option value="numeric_score">Exact Scoreline</option>
                             <option value="multi_select">Multi-select (scorers)</option>
+                            <option value="text">Free Text (e.g. who scores first)</option>
                         </select>
                     </div>
                     <div className="md:col-span-2"><label className="label-retro">Question Text</label><input required value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} className="input-retro" placeholder="Who will win Argentina vs Brazil?" data-testid="question-text" /></div>
-                    {form.type !== "numeric_score" && (
+                    {form.type !== "numeric_score" && form.type !== "text" && (
                         <div className="md:col-span-2 lg:col-span-1">
                             <label className="label-retro">Options (comma separated)</label>
                             <input value={form.options} onChange={(e) => setForm({ ...form, options: e.target.value })} readOnly={form.type === "radio"} className={`input-retro ${form.type === "radio" ? "opacity-60 cursor-not-allowed" : ""}`} placeholder="Argentina, Draw, Brazil" data-testid="question-options" />
                             {form.type === "radio" && <p className="font-mono text-[10px] uppercase tracking-widest opacity-60 mt-1">Fixed to Yes / No</p>}
+                        </div>
+                    )}
+                    {form.type === "text" && (
+                        <div className="md:col-span-2 lg:col-span-1 flex items-end">
+                            <p className="font-mono text-[10px] uppercase tracking-widest opacity-60">Players type any answer — graded by exact text match (case-insensitive) when you declare the result.</p>
                         </div>
                     )}
                     <div><label className="label-retro">Points</label><input type="number" min="1" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} className="input-retro" data-testid="question-points" /></div>
@@ -445,6 +451,8 @@ function AdminQuestionRow({ q, onChanged, onDelete }) {
                                 {multi.includes(opt) ? "✓ " : ""}{opt}
                             </button>
                         ))
+                    ) : q.type === "text" ? (
+                        <input value={choice} onChange={(e) => setChoice(e.target.value)} className="input-retro !w-56" placeholder="e.g. Mbappe" data-testid={`result-text-${q.id}`} />
                     ) : (
                         q.options.map((opt) => (
                             <button key={opt} type="button" onClick={() => setChoice(opt)}
