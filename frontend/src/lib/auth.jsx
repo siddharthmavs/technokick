@@ -22,8 +22,15 @@ export function AuthProvider({ children }) {
             .finally(() => setLoading(false));
     }, []);
 
-    const loginUser = async (phone, name, company) => {
-        const r = await api.post("/auth/user/login", { phone, name, company });
+    const signupUser = async (phone, name, company, password) => {
+        const r = await api.post("/auth/user/signup", { phone, name, company, password });
+        localStorage.setItem("tk_token", r.data.token);
+        setUser(r.data.user);
+        return r.data.user;
+    };
+
+    const loginUser = async (phone, password) => {
+        const r = await api.post("/auth/user/login", { phone, password });
         localStorage.setItem("tk_token", r.data.token);
         setUser(r.data.user);
         return r.data.user;
@@ -42,7 +49,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, loginUser, loginAdmin, logout, setUser }}>
+        <AuthContext.Provider value={{ user, loading, loginUser, signupUser, loginAdmin, logout, setUser }}>
             {children}
         </AuthContext.Provider>
     );

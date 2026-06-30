@@ -23,11 +23,15 @@ export default function PS5Terms() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [content, setContent] = useState("");
+    const [loaded, setLoaded] = useState(false);
     const [accepted, setAccepted] = useState(false);
     const regCd = useCountdown(PS5_REG_DEADLINE);
 
     useEffect(() => {
-        api.get("/settings/tnc").then((r) => setContent(r.data.content)).catch(() => {});
+        api.get("/settings/tnc")
+            .then((r) => setContent(r.data.content))
+            .catch(() => {})
+            .finally(() => setLoaded(true));
     }, []);
 
     const proceed = () => {
@@ -59,7 +63,7 @@ export default function PS5Terms() {
                     )}
 
                     <div className="retro-card bg-white p-6 md:p-8" data-testid="tnc-content">
-                        <MarkdownLite text={content || "Loading the rulebook…"} />
+                        <MarkdownLite text={!loaded ? "Loading the rulebook…" : (content || "The rulebook hasn't been published yet. Check back soon!")} />
                     </div>
 
                     <label className="flex items-start gap-3 mt-6 cursor-pointer select-none ticket p-4" data-testid="tnc-accept-label">

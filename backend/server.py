@@ -23,6 +23,7 @@ from fastapi.responses import StreamingResponse
 from pywebpush import webpush, WebPushException
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import DuplicateKeyError
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
 
@@ -114,10 +115,16 @@ class UserPublic(BaseModel):
     created_at: str
 
 
-class UserLoginIn(BaseModel):
+class UserSignupIn(BaseModel):
     phone: str
     name: str
     company: Optional[str] = None
+    password: str
+
+
+class UserLoginIn(BaseModel):
+    phone: str
+    password: str
 
 
 class AdminLoginIn(BaseModel):
@@ -192,34 +199,42 @@ class SettingsIn(BaseModel):
 
 
 # ---------- Auth Endpoints ----------
-@api_router.post("/auth/user/login", response_model=AuthOut)
-async def user_login(data: UserLoginIn):
-    """Frictionless user login. Auto-creates account on first login by phone."""
+@api_router.post("/auth/user/signup", response_model=AuthOut)
+async def user_signup(data: UserSignupIn):
     phone = data.phone.strip()
     name = data.name.strip()
+    password = data.password
     if not phone or not name:
         raise HTTPException(status_code=400, detail="Phone and name are required")
-    user = await db.users.find_one({"phone": phone, "role": "user"})
-    if user is None:
-        user = {
-            "id": str(uuid.uuid4()),
-            "name": name,
-            "phone": phone,
-            "company": (data.company or "").strip() or None,
-            "role": "user",
-            "created_at": now_utc().isoformat(),
-        }
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    existing = await db.users.find_one({"phone": phone, "role": "user"})
+    if existing:
+        raise HTTPException(status_code=400, detail="An account with this phone number already exists. Please log in.")
+    user = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "phone": phone,
+        "company": (data.company or "").strip() or None,
+        "role": "user",
+        "password_hash": hash_password(password),
+        "created_at": now_utc().isoformat(),
+    }
+    try:
         await db.users.insert_one(user)
-    else:
-        # Update name/company if provided
-        updates = {}
-        if name and user.get("name") != name:
-            updates["name"] = name
-        if data.company and user.get("company") != data.company:
-            updates["company"] = data.company.strip()
-        if updates:
-            await db.users.update_one({"id": user["id"]}, {"$set": updates})
-            user.update(updates)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=400, detail="An account with this phone number already exists. Please log in.")
+    user = strip_id(user)
+    user.pop("password_hash", None)
+    return AuthOut(token=create_token(user["id"], "user"), user=UserPublic(**user))
+
+
+@api_router.post("/auth/user/login", response_model=AuthOut)
+async def user_login(data: UserLoginIn):
+    phone = data.phone.strip()
+    user = await db.users.find_one({"phone": phone, "role": "user"})
+    if not user or not verify_password(data.password, user.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid phone number or password")
     user = strip_id(user)
     user.pop("password_hash", None)
     return AuthOut(token=create_token(user["id"], "user"), user=UserPublic(**user))
@@ -806,8 +821,8 @@ DEFAULT_TNC = """\
 
 async def seed_database():
     # Indexes
-    await db.users.create_index("phone", unique=False, sparse=True)
-    await db.users.create_index("email", unique=False, sparse=True)
+    await db.users.create_index("phone", unique=True, sparse=True)
+    await db.users.create_index("email", unique=True, sparse=True)
     await db.ps5_registrations.create_index("user_id")
     await db.ps5_matches.create_index("scheduled_at")
     await db.questions.create_index("date")
@@ -835,8 +850,8 @@ async def seed_database():
 
     # T&C
     tnc = await db.settings.find_one({"id": "tnc"})
-    if not tnc:
-        await db.settings.insert_one({"id": "tnc", "content": DEFAULT_TNC})
+    if not tnc or not (tnc.get("content") or "").strip():
+        await db.settings.update_one({"id": "tnc"}, {"$set": {"id": "tnc", "content": DEFAULT_TNC}}, upsert=True)
 
     # Migrate: wipe old team-based seed data (schema changed to individual players)
     if await db.ps5_registrations.find_one({"team_name": {"$exists": True}}):
@@ -846,89 +861,6 @@ async def seed_database():
     tnc_doc = await db.settings.find_one({"id": "tnc"})
     if tnc_doc and "team pools" in tnc_doc.get("content", ""):
         await db.settings.update_one({"id": "tnc"}, {"$set": {"content": DEFAULT_TNC}})
-
-    # Demo users
-    demo_users = [
-        {"name": "Rahul Krishnan", "phone": "9000000001", "company": "Infosys"},
-        {"name": "Priya Menon", "phone": "9000000002", "company": "UST Global"},
-        {"name": "Arjun Nair", "phone": "9000000003", "company": "TCS"},
-        {"name": "Sneha Pillai", "phone": "9000000004", "company": "Allianz"},
-        {"name": "Vikram Iyer", "phone": "9000000005", "company": "Tata Elxsi"},
-        {"name": "Anjali Das", "phone": "9000000006", "company": "EY"},
-        {"name": "Jithin George", "phone": "9000000007", "company": "Quest Global"},
-        {"name": "Meera Suresh", "phone": "9000000008", "company": "IBS Software"},
-    ]
-    for du in demo_users:
-        if not await db.users.find_one({"phone": du["phone"]}):
-            await db.users.insert_one({"id": str(uuid.uuid4()), **du, "role": "user", "created_at": now_utc().isoformat()})
-
-    # PS5 Registrations: individual players drawn into groups A/B
-    if await db.ps5_registrations.count_documents({}) == 0:
-        seed_players = await db.users.find({"role": "user", "phone": {"$in": [d["phone"] for d in demo_users]}}, {"_id": 0}).sort("phone", 1).to_list(20)
-        group_map = ["A", "A", "A", "A", "B", "B", "B", "B"]
-        for i, u in enumerate(seed_players[:8]):
-            await db.ps5_registrations.insert_one({
-                "id": str(uuid.uuid4()),
-                "user_id": u["id"],
-                "player_name": u["name"],
-                "company_name": u.get("company", ""),
-                "contact": u.get("phone", ""),
-                "group": group_map[i] if i < len(group_map) else None,
-                "payment_status": "confirmed" if i < 6 else "pending",
-                "created_at": now_utc().isoformat(),
-                "edited_at": None,
-            })
-
-    # PS5 Matches: group stage + knockout, individual players
-    if await db.ps5_matches.count_documents({}) == 0:
-        base = now_utc().replace(hour=13, minute=30, second=0, microsecond=0)  # 7 PM IST = 13:30 UTC
-        sample_matches = [
-            {"round_label": "Group A", "player_a": "Rahul Krishnan", "player_a_company": "Infosys", "player_b": "Priya Menon", "player_b_company": "UST Global", "station": "Station 1", "scheduled_at": (base - timedelta(days=2)).isoformat(), "score_a": 3, "score_b": 1, "status": "completed", "winner": "Rahul Krishnan", "player_of_match": "Rahul Krishnan"},
-            {"round_label": "Group A", "player_a": "Arjun Nair", "player_a_company": "TCS", "player_b": "Sneha Pillai", "player_b_company": "Allianz", "station": "Station 2", "scheduled_at": (base - timedelta(days=2, hours=-1)).isoformat(), "score_a": 2, "score_b": 2, "status": "completed", "winner": "Draw", "player_of_match": None},
-            {"round_label": "Group B", "player_a": "Vikram Iyer", "player_a_company": "Tata Elxsi", "player_b": "Anjali Das", "player_b_company": "EY", "station": "Station 1", "scheduled_at": (base - timedelta(days=1)).isoformat(), "score_a": 1, "score_b": 3, "status": "completed", "winner": "Anjali Das", "player_of_match": "Anjali Das"},
-            {"round_label": "Group B", "player_a": "Jithin George", "player_a_company": "Quest Global", "player_b": "Meera Suresh", "player_b_company": "IBS Software", "station": "Station 2", "scheduled_at": base.isoformat(), "score_a": 1, "score_b": 0, "status": "live", "winner": None, "player_of_match": None},
-            {"round_label": "Group A", "player_a": "Rahul Krishnan", "player_a_company": "Infosys", "player_b": "Arjun Nair", "player_b_company": "TCS", "station": "Station 1", "scheduled_at": (base + timedelta(hours=1)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None, "player_of_match": None},
-            {"round_label": "Semifinal", "player_a": "TBD", "player_a_company": "TBD", "player_b": "TBD", "player_b_company": "TBD", "station": "Station 1", "scheduled_at": (base + timedelta(days=1)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None, "player_of_match": None},
-            {"round_label": "Final", "player_a": "TBD", "player_a_company": "TBD", "player_b": "TBD", "player_b_company": "TBD", "station": "Main Arena", "scheduled_at": (base + timedelta(days=3)).isoformat(), "score_a": 0, "score_b": 0, "status": "upcoming", "winner": None, "player_of_match": None},
-        ]
-        for m in sample_matches:
-            await db.ps5_matches.insert_one({"id": str(uuid.uuid4()), "created_at": now_utc().isoformat(), **m})
-
-    # Fixtures (real WC matches for predictions)
-    if await db.fixtures.count_documents({}) == 0:
-        today = now_utc().strftime("%Y-%m-%d")
-        sample_fixtures = [
-            {"team_a": "Argentina", "team_a_flag": "🇦🇷", "team_b": "Brazil", "team_b_flag": "🇧🇷", "kickoff_at": f"{today}T19:30:00Z", "venue": "MetLife Stadium, New Jersey", "stage": "Group A"},
-            {"team_a": "Spain", "team_a_flag": "🇪🇸", "team_b": "France", "team_b_flag": "🇫🇷", "kickoff_at": f"{today}T22:00:00Z", "venue": "SoFi Stadium, LA", "stage": "Group B"},
-            {"team_a": "Germany", "team_a_flag": "🇩🇪", "team_b": "England", "team_b_flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "kickoff_at": f"{today}T01:30:00Z", "venue": "Estadio Azteca, Mexico City", "stage": "Group C"},
-        ]
-        for f in sample_fixtures:
-            await db.fixtures.insert_one({"id": str(uuid.uuid4()), **f, "created_at": now_utc().isoformat()})
-
-    # Daily questions for today
-    today = now_utc().strftime("%Y-%m-%d")
-    if await db.questions.count_documents({"date": today}) == 0:
-        fixtures = await db.fixtures.find({}, {"_id": 0}).to_list(10)
-        if len(fixtures) >= 2:
-            f1, f2 = fixtures[0], fixtures[1]
-            sample_qs = [
-                {"date": today, "fixture_id": f1["id"], "text": f"Who will win {f1['team_a']} vs {f1['team_b']}?", "type": "dropdown", "options": [f1["team_a"], "Draw", f1["team_b"]], "points": 10, "order": 1},
-                {"date": today, "fixture_id": f1["id"], "text": f"Predict the exact scoreline ({f1['team_a']} vs {f1['team_b']})", "type": "numeric_score", "options": [], "points": 25, "order": 2},
-                {"date": today, "fixture_id": f2["id"], "text": f"Will there be a red card in {f2['team_a']} vs {f2['team_b']}?", "type": "radio", "options": ["Yes", "No"], "points": 5, "order": 3},
-                {"date": today, "fixture_id": f2["id"], "text": f"Who will score for {f2['team_a']}? (pick up to 2)", "type": "multi_select", "options": ["Pedri", "Lamine Yamal", "Nico Williams", "Ferran Torres", "Alvaro Morata"], "points": 5, "order": 4},
-            ]
-            for q in sample_qs:
-                await db.questions.insert_one({"id": str(uuid.uuid4()), **q, "correct_answer": None, "results_entered": False, "created_at": now_utc().isoformat()})
-
-    # Announcements
-    if await db.announcements.count_documents({}) == 0:
-        sample = [
-            {"title": "🎮 Tournament Kicks Off Tonight!", "body": "First match at 7:00 PM IST. Check your dashboard for your station number."},
-            {"title": "💰 Pay Your ₹100 Entry Fee", "body": "Visit the committee desk at TC Building, Ground Floor. Payment confirmation reflects in your dashboard."},
-            {"title": "🏆 Daily Predictions Are Live", "body": "Submit 4 predictions every day before 8 PM IST and climb the leaderboard!"},
-        ]
-        for a in sample:
-            await db.announcements.insert_one({"id": str(uuid.uuid4()), **a, "created_at": now_utc().isoformat()})
 
     logger.info("✅ Seed complete")
 
