@@ -746,7 +746,7 @@ async def admin_create_announcement(data: AnnouncementIn, background_tasks: Back
 # ============= WEB PUSH NOTIFICATIONS ===========================
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY")
-VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:hr@mav-s.com")
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:sidharth.gireesh@mav-s.com")
 
 
 async def broadcast_push(title: str, body: str, url: str = "/"):
@@ -852,7 +852,7 @@ DEFAULT_TNC = """\
 7. **Code of Conduct**: Be respectful. Trash talk in good fun only. Cheating = disqualification.
 8. **No-show**: 5-minute grace, then walkover (3-0 default) awarded to opponent.
 9. **Withdrawal**: Allowed until the group draw is published. Post draw, contact the committee.
-10. **Help Desk**: For anything related to the games — payments, scheduling, disputes — contact the committee (HR, MAV-S Innovations) at hr@mav-s.com.
+10. **Help Desk**: For anything related to the games — payments, scheduling, disputes — contact the committee (HR, MAV-S Innovations) at sidharth.gireesh@mav-s.com or aswathy.br@mav-s.com.
 """
 
 

@@ -37,7 +37,7 @@ const FAQS = [
     },
     {
         q: "Who do I contact for help?",
-        a: "The games committee is run by HR at MAVS Innovation. For anything related to the games — payments, scheduling, disputes, withdrawals — mail the help desk at hr@mav-s.com.",
+        a: "The games committee is run by HR at MAVS Innovation. For anything related to the games — payments, scheduling, disputes, withdrawals — mail the help desk at sidharth.gireesh@mav-s.com or aswathy.br@mav-s.com.",
     },
     {
         q: "What do winners get?",

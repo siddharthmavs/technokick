@@ -188,10 +188,11 @@ export function Footer() {
                     <div className="font-heading text-2xl">TECHNOKICK · 2026</div>
                     <div className="font-mono text-xs uppercase tracking-widest opacity-70">Made with ⚽ for the Technopark campus</div>
                 </div>
-                <a href="mailto:hr@mav-s.com" className="group" data-testid="helpdesk-link">
+                <div data-testid="helpdesk-link">
                     <div className="font-mono text-[10px] uppercase tracking-widest opacity-60">Games Help Desk · Committee</div>
-                    <div className="font-body font-bold text-mustard underline group-hover:text-cream">hr@mav-s.com</div>
-                </a>
+                    <a href="mailto:sidharth.gireesh@mav-s.com" className="font-body font-bold text-mustard underline hover:text-cream block">sidharth.gireesh@mav-s.com</a>
+                    <a href="mailto:aswathy.br@mav-s.com" className="font-body font-bold text-mustard underline hover:text-cream block">aswathy.br@mav-s.com</a>
+                </div>
                 <div className="flex items-center gap-3 border-l-2 border-cream/20 pl-5" data-testid="mavs-branding">
                     <img src="/mavs-logo.png" alt="MAV-S Innovation" className="h-10 w-10 object-cover object-left border-2 border-cream/30" />
                     <div className="font-mono text-[10px] uppercase tracking-widest opacity-80 leading-relaxed">Presented by<br /><span className="text-mustard font-bold">MAV-S Innovation</span></div>

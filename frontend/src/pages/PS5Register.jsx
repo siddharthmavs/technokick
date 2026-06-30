@@ -97,7 +97,7 @@ export default function PS5Register() {
                         <div className="ticket p-8 text-center" data-testid="reg-closed-card">
                             <span className="stamp stamp-brick text-xl">Registration Closed</span>
                             <p className="font-body mt-4 opacity-70">The PS5 FIFA World Cup registration window ended on <strong>5 July 2026</strong>. New entries are no longer accepted.</p>
-                            <p className="font-body text-sm mt-3 opacity-60">Questions? Mail the committee: <a href="mailto:hr@mav-s.com" className="underline">hr@mav-s.com</a></p>
+                            <p className="font-body text-sm mt-3 opacity-60">Questions? Mail the committee: <a href="mailto:sidharth.gireesh@mav-s.com" className="underline">sidharth.gireesh@mav-s.com</a> or <a href="mailto:aswathy.br@mav-s.com" className="underline">aswathy.br@mav-s.com</a></p>
                         </div>
                     ) : reg && !editing ? (
                         <div className="ticket p-6 md:p-8" data-testid="registration-ticket">
@@ -127,7 +127,7 @@ export default function PS5Register() {
 
                             {reg.payment_status !== "confirmed" && (
                                 <div className="mt-5 bg-mustard border-2 border-ink p-3 font-body text-sm font-bold" data-testid="payment-instructions">
-                                    💰 Pay ₹100 at the committee desk (Kabani Building 2nd floor MAV-S Innovations). Your stamp flips to PAID once confirmed. Questions? Mail the committee: <a href="mailto:hr@mav-s.com" className="underline">hr@mav-s.com</a>
+                                    💰 Pay ₹100 at the committee desk (Kabani Building 2nd floor MAV-S Innovations). Your stamp flips to PAID once confirmed. Questions? Mail the committee: <a href="mailto:sidharth.gireesh@mav-s.com" className="underline">sidharth.gireesh@mav-s.com</a> or <a href="mailto:aswathy.br@mav-s.com" className="underline">aswathy.br@mav-s.com</a>
                                 </div>
                             )}
 

@@ -50,7 +50,7 @@ export default function AdminLogin() {
                                 {loading ? "Authenticating…" : "Enter Console →"}
                             </button>
                             <div className="bg-cream border-2 border-ink p-3 font-body text-xs" data-testid="admin-login-hint">
-                                Committee access only. Trouble logging in? Contact <a href="mailto:hr@mav-s.com" className="underline font-bold">hr@mav-s.com</a>.
+                                Committee access only. Trouble logging in? Contact <a href="mailto:sidharth.gireesh@mav-s.com" className="underline font-bold">sidharth.gireesh@mav-s.com</a> or <a href="mailto:aswathy.br@mav-s.com" className="underline font-bold">aswathy.br@mav-s.com</a>.
                             </div>
                         </div>
                     </form>

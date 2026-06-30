@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import Header from "../components/Header";
 import { Footer } from "./Home";
 import Recaptcha from "../components/Recaptcha";
@@ -49,6 +50,8 @@ export default function Login() {
     const [company, setCompany] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [recaptchaToken, setRecaptchaToken] = useState(null);
     const [recaptchaKey, setRecaptchaKey] = useState(0);
 
@@ -244,19 +247,30 @@ export default function Login() {
 
                             <div>
                                 <label className="label-retro" htmlFor="login-password">Password</label>
-                                <input
-                                    id="login-password"
-                                    type="password"
-                                    value={password}
-                                    onChange={handlePasswordChange}
-                                    onBlur={() => handleBlur("password", password, validatePassword)}
-                                    required
-                                    className="input-retro"
-                                    placeholder="••••••••"
-                                    data-testid="login-password-input"
-                                    aria-invalid={Boolean(fieldErrors.password)}
-                                    aria-describedby="login-password-error"
-                                />
+                                <div className="relative">
+                                    <input
+                                        id="login-password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={handlePasswordChange}
+                                        onBlur={() => handleBlur("password", password, validatePassword)}
+                                        required
+                                        className="input-retro !pr-11"
+                                        placeholder="••••••••"
+                                        data-testid="login-password-input"
+                                        aria-invalid={Boolean(fieldErrors.password)}
+                                        aria-describedby="login-password-error"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((v) => !v)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                        data-testid="toggle-password-visibility"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                                 {fieldErrors.password && (
                                     <p id="login-password-error" className="text-brick text-sm font-bold mt-1" data-testid="login-password-error">
                                         {fieldErrors.password}
@@ -264,7 +278,7 @@ export default function Login() {
                                 )}
                                 {mode === "login" && (
                                     <p className="font-mono text-[11px] uppercase tracking-widest opacity-60 mt-1" data-testid="forgot-password-hint">
-                                        Forgot password? Mail the committee: <a href="mailto:hr@mav-s.com" className="underline hover:opacity-100">hr@mav-s.com</a>
+                                        Forgot password? Mail the committee: <a href="mailto:sidharth.gireesh@mav-s.com" className="underline hover:opacity-100">sidharth.gireesh@mav-s.com</a> or <a href="mailto:aswathy.br@mav-s.com" className="underline hover:opacity-100">aswathy.br@mav-s.com</a>
                                     </p>
                                 )}
                             </div>
@@ -272,19 +286,30 @@ export default function Login() {
                             {mode === "signup" && (
                                 <div>
                                     <label className="label-retro" htmlFor="login-confirm-password">Confirm Password</label>
-                                    <input
-                                        id="login-confirm-password"
-                                        type="password"
-                                        value={confirmPassword}
-                                        onChange={handleConfirmPasswordChange}
-                                        onBlur={() => handleBlur("confirmPassword", confirmPassword, (v) => (v !== password ? "Passwords don't match" : ""))}
-                                        required
-                                        className="input-retro"
-                                        placeholder="••••••••"
-                                        data-testid="login-confirm-password-input"
-                                        aria-invalid={Boolean(fieldErrors.confirmPassword)}
-                                        aria-describedby="login-confirm-password-error"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            id="login-confirm-password"
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            value={confirmPassword}
+                                            onChange={handleConfirmPasswordChange}
+                                            onBlur={() => handleBlur("confirmPassword", confirmPassword, (v) => (v !== password ? "Passwords don't match" : ""))}
+                                            required
+                                            className="input-retro !pr-11"
+                                            placeholder="••••••••"
+                                            data-testid="login-confirm-password-input"
+                                            aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                                            aria-describedby="login-confirm-password-error"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword((v) => !v)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100"
+                                            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                            data-testid="toggle-confirm-password-visibility"
+                                        >
+                                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
                                     {fieldErrors.confirmPassword && (
                                         <p id="login-confirm-password-error" className="text-brick text-sm font-bold mt-1" data-testid="login-confirm-password-error">
                                             {fieldErrors.confirmPassword}
