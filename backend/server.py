@@ -51,6 +51,14 @@ def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
+IST_OFFSET = timedelta(hours=5, minutes=30)
+
+
+def today_ist_str() -> str:
+    """Calendar date string (YYYY-MM-DD) in IST — the tournament's local timezone."""
+    return (now_utc() + IST_OFFSET).strftime("%Y-%m-%d")
+
+
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
@@ -420,7 +428,7 @@ async def list_fixtures():
 # ---------- Daily Predictions ----------
 @api_router.get("/predictions/today")
 async def predictions_today(user: dict = Depends(get_current_user)):
-    today = now_utc().strftime("%Y-%m-%d")
+    today = today_ist_str()
     questions = await db.questions.find({"date": today}, {"_id": 0}).sort("order", 1).to_list(50)
     # attach fixtures
     fixture_ids = list({q["fixture_id"] for q in questions})
@@ -439,7 +447,7 @@ async def predictions_today(user: dict = Depends(get_current_user)):
 
 @api_router.post("/predictions/submit")
 async def predictions_submit(data: SubmissionIn, user: dict = Depends(get_current_user)):
-    today = now_utc().strftime("%Y-%m-%d")
+    today = today_ist_str()
     # Check window: 10:00 - 20:00 IST. IST = UTC+5:30. So 04:30 UTC to 14:30 UTC.
     # We'll check window using the admin setting if present.
     setting = await db.settings.find_one({"id": "window"}, {"_id": 0}) or {}

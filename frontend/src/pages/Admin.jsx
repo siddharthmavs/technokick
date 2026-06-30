@@ -307,10 +307,12 @@ function FixturesTab() {
 }
 
 /* ---------------- QUESTIONS ---------------- */
+const todayIST = () => new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
 function QuestionsTab() {
     const [questions, setQuestions] = useState(null);
     const [fixtures, setFixtures] = useState([]);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIST();
     const empty = { date: today, fixture_id: "", text: "", type: "dropdown", options: "", points: 10, order: 1 };
     const [form, setForm] = useState(empty);
 
