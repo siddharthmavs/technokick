@@ -262,6 +262,11 @@ export default function Login() {
                                         {fieldErrors.password}
                                     </p>
                                 )}
+                                {mode === "login" && (
+                                    <p className="font-mono text-[11px] uppercase tracking-widest opacity-60 mt-1" data-testid="forgot-password-hint">
+                                        Forgot password? Mail the committee: <a href="mailto:hr@mav-s.com" className="underline hover:opacity-100">hr@mav-s.com</a>
+                                    </p>
+                                )}
                             </div>
 
                             {mode === "signup" && (
