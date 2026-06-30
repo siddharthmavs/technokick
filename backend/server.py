@@ -17,6 +17,7 @@ from typing import List, Optional, Literal, Any
 
 import jwt
 import bcrypt
+import httpx
 import pandas as pd
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
@@ -59,6 +60,30 @@ def verify_password(plain: str, hashed: str) -> bool:
         return bcrypt.checkpw(plain.encode(), hashed.encode())
     except Exception:
         return False
+
+
+RECAPTCHA_SECRET_KEY = os.environ.get("RECAPTCHA_SECRET_KEY", "")
+
+
+async def verify_recaptcha(token: Optional[str]):
+    """Verify a Google reCAPTCHA v2 token. No-ops with a warning if the secret key isn't configured."""
+    if not RECAPTCHA_SECRET_KEY:
+        logger.warning("RECAPTCHA_SECRET_KEY not set — skipping CAPTCHA verification")
+        return
+    if not token:
+        raise HTTPException(status_code=400, detail="Please complete the CAPTCHA.")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(
+                "https://www.google.com/recaptcha/api/siteverify",
+                data={"secret": RECAPTCHA_SECRET_KEY, "response": token},
+            )
+        result = r.json()
+    except Exception as e:
+        logger.error(f"reCAPTCHA verification request failed: {e}")
+        raise HTTPException(status_code=400, detail="CAPTCHA verification failed. Please try again.")
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail="CAPTCHA verification failed. Please try again.")
 
 
 def create_token(user_id: str, role: str) -> str:
@@ -120,11 +145,13 @@ class UserSignupIn(BaseModel):
     name: str
     company: Optional[str] = None
     password: str
+    recaptcha_token: Optional[str] = None
 
 
 class UserLoginIn(BaseModel):
     phone: str
     password: str
+    recaptcha_token: Optional[str] = None
 
 
 class AdminLoginIn(BaseModel):
@@ -201,6 +228,7 @@ class SettingsIn(BaseModel):
 # ---------- Auth Endpoints ----------
 @api_router.post("/auth/user/signup", response_model=AuthOut)
 async def user_signup(data: UserSignupIn):
+    await verify_recaptcha(data.recaptcha_token)
     phone = data.phone.strip()
     name = data.name.strip()
     password = data.password
@@ -231,6 +259,7 @@ async def user_signup(data: UserSignupIn):
 
 @api_router.post("/auth/user/login", response_model=AuthOut)
 async def user_login(data: UserLoginIn):
+    await verify_recaptcha(data.recaptcha_token)
     phone = data.phone.strip()
     user = await db.users.find_one({"phone": phone, "role": "user"})
     if not user or not verify_password(data.password, user.get("password_hash", "")):

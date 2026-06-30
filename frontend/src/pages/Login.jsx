@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import { Footer } from "./Home";
+import Recaptcha from "../components/Recaptcha";
 import { useAuth } from "../lib/auth";
 import { formatApiError } from "../lib/api";
 
@@ -48,6 +49,8 @@ export default function Login() {
     const [company, setCompany] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [recaptchaToken, setRecaptchaToken] = useState(null);
+    const [recaptchaKey, setRecaptchaKey] = useState(0);
 
     const [fieldErrors, setFieldErrors] = useState({ phone: "", name: "", company: "", password: "", confirmPassword: "" });
     const [touched, setTouched] = useState({ phone: false, name: false, company: false, password: false, confirmPassword: false });
@@ -60,6 +63,8 @@ export default function Login() {
         setErr("");
         setFieldErrors({ phone: "", name: "", company: "", password: "", confirmPassword: "" });
         setTouched({ phone: false, name: false, company: false, password: false, confirmPassword: false });
+        setRecaptchaToken(null);
+        setRecaptchaKey((k) => k + 1);
     };
 
     const handlePhoneChange = (e) => {
@@ -116,16 +121,24 @@ export default function Login() {
 
         if (Object.values(errors).some(Boolean)) return;
 
+        if (!recaptchaToken && process.env.REACT_APP_RECAPTCHA_SITE_KEY) {
+            setErr("Please complete the CAPTCHA.");
+            return;
+        }
+
         setLoading(true);
         try {
             if (mode === "signup") {
-                await signupUser(phone.trim(), name.trim(), company.trim(), password);
+                await signupUser(phone.trim(), name.trim(), company.trim(), password, recaptchaToken);
             } else {
-                await loginUser(phone.trim(), password);
+                await loginUser(phone.trim(), password, recaptchaToken);
             }
             navigate(next, { replace: true });
         } catch (e2) {
             setErr(formatApiError(e2.response?.data?.detail) || e2.message);
+            // reCAPTCHA tokens are single-use — force a fresh solve after any failed attempt
+            setRecaptchaToken(null);
+            setRecaptchaKey((k) => k + 1);
         } finally {
             setLoading(false);
         }
@@ -275,9 +288,13 @@ export default function Login() {
                                 </div>
                             )}
 
+                            <div>
+                                <Recaptcha key={recaptchaKey} onChange={setRecaptchaToken} />
+                            </div>
+
                             {err && <div className="bg-brick text-white p-3 border-2 border-ink font-bold text-sm" data-testid="login-error">{err}</div>}
 
-                            <button disabled={loading || hasErrors} className="btn-retro btn-brick w-full disabled:opacity-50 disabled:cursor-not-allowed" data-testid="login-submit-btn">
+                            <button disabled={loading || hasErrors || (!recaptchaToken && Boolean(process.env.REACT_APP_RECAPTCHA_SITE_KEY))} className="btn-retro btn-brick w-full disabled:opacity-50 disabled:cursor-not-allowed" data-testid="login-submit-btn">
                                 {loading ? "Kicking off…" : mode === "signup" ? "Create Account →" : "Sign In & Play →"}
                             </button>
                         </div>

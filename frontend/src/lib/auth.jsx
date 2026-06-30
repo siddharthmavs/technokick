@@ -22,15 +22,15 @@ export function AuthProvider({ children }) {
             .finally(() => setLoading(false));
     }, []);
 
-    const signupUser = async (phone, name, company, password) => {
-        const r = await api.post("/auth/user/signup", { phone, name, company, password });
+    const signupUser = async (phone, name, company, password, recaptchaToken) => {
+        const r = await api.post("/auth/user/signup", { phone, name, company, password, recaptcha_token: recaptchaToken });
         localStorage.setItem("tk_token", r.data.token);
         setUser(r.data.user);
         return r.data.user;
     };
 
-    const loginUser = async (phone, password) => {
-        const r = await api.post("/auth/user/login", { phone, password });
+    const loginUser = async (phone, password, recaptchaToken) => {
+        const r = await api.post("/auth/user/login", { phone, password, recaptcha_token: recaptchaToken });
         localStorage.setItem("tk_token", r.data.token);
         setUser(r.data.user);
         return r.data.user;
