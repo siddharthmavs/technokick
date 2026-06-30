@@ -41,7 +41,7 @@ export default function Home() {
 const marqueeItems = announcements.length > 0
   ? [
       ...announcements.map((a) => `${a.title} — ${a.body}`),
-      "Messi is the GOAT 🐐", "Iam Back Iam going Back"
+      "Messi is the GOAT 🐐",
     ]
   : [
       "TechnoKick 2026 is LIVE",
