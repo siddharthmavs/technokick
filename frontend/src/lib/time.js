@@ -47,6 +47,19 @@ export function isPredictionWindowOpen() {
     return h >= 4.5 && h <= 14.5; // 10AM to 8PM IST in UTC
 }
 
+/** Today's calendar date in IST as YYYY-MM-DD */
+export function todayIstDateStr() {
+    return new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/** Next 9:30AM IST (4:00 UTC) — the leaderboard reveal deadline */
+export function nextLeaderboardReveal() {
+    const now = new Date();
+    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 4, 0, 0));
+    if (now.getTime() > target.getTime()) target.setUTCDate(target.getUTCDate() + 1);
+    return target;
+}
+
 // July 5 2026, 23:59 IST = 18:29 UTC
 export const PS5_REG_DEADLINE = new Date(Date.UTC(2026, 6, 5, 18, 30, 0));
 

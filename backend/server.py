@@ -492,9 +492,36 @@ async def predictions_history(user: dict = Depends(get_current_user)):
     return {"total_points": total_points, "submissions": subs, "questions": questions, "fixtures": fixtures}
 
 
+@api_router.get("/predictions/leaderboard/dates")
+async def leaderboard_dates():
+    """All dates the committee has published results for, newest first."""
+    docs = await db.leaderboard_publishes.find({}, {"_id": 0}).sort("date", -1).to_list(365)
+    return docs
+
+
+@api_router.get("/predictions/leaderboard/status")
+async def leaderboard_status(date: Optional[str] = None):
+    target = date or today_ist_str()
+    pub = await db.leaderboard_publishes.find_one({"date": target}, {"_id": 0})
+    return {
+        "published": bool(pub),
+        "date": target,
+        "published_at": pub.get("published_at") if pub else None,
+    }
+
+
+async def _require_leaderboard_published(date: Optional[str] = None) -> str:
+    status = await leaderboard_status(date)
+    if not status["published"]:
+        raise HTTPException(status_code=403, detail="Results haven't been published for this date yet.")
+    return status["date"]
+
+
 @api_router.get("/predictions/leaderboard")
-async def predictions_leaderboard():
+async def predictions_leaderboard(date: Optional[str] = None):
+    target = await _require_leaderboard_published(date)
     pipe = [
+        {"$match": {"date": {"$lte": target}}},
         {"$group": {"_id": "$user_id", "points": {"$sum": "$points_earned"}, "submissions": {"$sum": 1}, "first_submitted": {"$min": "$submitted_at"}}},
         {"$sort": {"points": -1, "first_submitted": 1}},
         {"$limit": 10},
@@ -516,11 +543,13 @@ async def predictions_leaderboard():
 
 
 @api_router.get("/predictions/leaderboard/full")
-async def predictions_leaderboard_full(page: int = 1, page_size: int = 20):
+async def predictions_leaderboard_full(date: Optional[str] = None, page: int = 1, page_size: int = 20):
+    target = await _require_leaderboard_published(date)
     page = max(1, page)
     page_size = max(1, min(page_size, 100))
     skip = (page - 1) * page_size
     pipe = [
+        {"$match": {"date": {"$lte": target}}},
         {"$group": {"_id": "$user_id", "points": {"$sum": "$points_earned"}, "submissions": {"$sum": 1}, "first_submitted": {"$min": "$submitted_at"}}},
         {"$sort": {"points": -1, "first_submitted": 1}},
         {"$facet": {
@@ -539,6 +568,7 @@ async def predictions_leaderboard_full(page: int = 1, page_size: int = 20):
         "total": total,
         "page": page,
         "page_size": page_size,
+        "date": target,
         "rows": [
             {
                 "rank": skip + i + 1,
@@ -800,6 +830,38 @@ async def admin_enter_result(qid: str, data: QuestionResultIn, _: dict = Depends
     return {"ok": True, "scored": len(subs)}
 
 
+@api_router.get("/admin/predictions/publish-status")
+async def admin_publish_status(_: dict = Depends(require_admin)):
+    today = today_ist_str()
+    todays_qs = await db.questions.find({"date": today}, {"_id": 0, "results_entered": 1}).to_list(200)
+    total = len(todays_qs)
+    declared = sum(1 for q in todays_qs if q.get("results_entered"))
+    pub = await db.leaderboard_publishes.find_one({"date": today}, {"_id": 0})
+    return {
+        "date": today,
+        "total_questions": total,
+        "declared_questions": declared,
+        "all_declared": total > 0 and declared == total,
+        "published": bool(pub),
+    }
+
+
+@api_router.post("/admin/predictions/publish")
+async def admin_publish_leaderboard(_: dict = Depends(require_admin)):
+    today = today_ist_str()
+    todays_qs = await db.questions.find({"date": today}, {"_id": 0, "results_entered": 1}).to_list(200)
+    if not todays_qs:
+        raise HTTPException(status_code=400, detail="No questions found for today.")
+    if any(not q.get("results_entered") for q in todays_qs):
+        raise HTTPException(status_code=400, detail="Declare results for all of today's questions before publishing.")
+    await db.leaderboard_publishes.update_one(
+        {"date": today},
+        {"$set": {"date": today, "published_at": now_utc().isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "date": today}
+
+
 @api_router.post("/admin/announcements")
 async def admin_create_announcement(data: AnnouncementIn, background_tasks: BackgroundTasks, _: dict = Depends(require_admin)):
     a = {"id": str(uuid.uuid4()), "title": data.title, "body": data.body, "created_at": now_utc().isoformat()}
@@ -929,6 +991,7 @@ async def seed_database():
     await db.ps5_matches.create_index("scheduled_at")
     await db.questions.create_index("date")
     await db.submissions.create_index([("user_id", 1), ("question_id", 1)], unique=True)
+    await db.leaderboard_publishes.create_index("date", unique=True)
 
     # Admin
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@technokick.com").lower()

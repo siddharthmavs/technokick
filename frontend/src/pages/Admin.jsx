@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import Header from "../components/Header";
 import { Footer } from "./Home";
 import api, { formatApiError } from "../lib/api";
+import { todayIstDateStr } from "../lib/time";
 
 const TABS = ["Overview", "Users", "Registrations", "Matches", "Fixtures", "Questions", "Announcements", "Settings"];
 const ROUNDS = ["Group A", "Group B", "Group C", "Group D", "Group E", "Group F", "Group G", "Group H", "Round of 16", "Quarterfinal", "Semifinal", "Third Place", "Final"];
@@ -365,17 +366,27 @@ function FixturesTab() {
 }
 
 /* ---------------- QUESTIONS ---------------- */
-const todayIST = () => new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
 function QuestionsTab() {
     const [questions, setQuestions] = useState(null);
     const [fixtures, setFixtures] = useState([]);
-    const today = todayIST();
+    const [pubStatus, setPubStatus] = useState(null);
+    const [publishing, setPublishing] = useState(false);
+    const today = todayIstDateStr();
     const empty = { date: today, fixture_id: "", text: "", type: "dropdown", options: "", points: 10, order: 1 };
     const [form, setForm] = useState(empty);
 
     const load = () => api.get("/admin/questions").then((r) => setQuestions(r.data)).catch(err);
-    useEffect(() => { load(); api.get("/fixtures").then((r) => setFixtures(r.data)).catch(() => {}); }, []);
+    const loadPubStatus = () => api.get("/admin/predictions/publish-status").then((r) => setPubStatus(r.data)).catch(() => {});
+    useEffect(() => { load(); loadPubStatus(); api.get("/fixtures").then((r) => setFixtures(r.data)).catch(() => {}); }, []);
+
+    const publish = async () => {
+        setPublishing(true);
+        try {
+            await api.post("/admin/predictions/publish");
+            toast.success("🏆 Leaderboard published! Players can now see today's results.");
+            loadPubStatus();
+        } catch (e) { err(e); } finally { setPublishing(false); }
+    };
 
     const create = async (e) => {
         e.preventDefault();
@@ -390,16 +401,38 @@ function QuestionsTab() {
             toast.success("Question published!");
             setForm({ ...empty, fixture_id: form.fixture_id });
             load();
+            loadPubStatus();
         } catch (e2) { err(e2); }
     };
     const remove = async (id) => {
         if (!window.confirm("Delete question? All its submissions will be deleted too.")) return;
-        try { await api.delete(`/admin/questions/${id}`); toast.success("Question deleted"); load(); } catch (e) { err(e); }
+        try { await api.delete(`/admin/questions/${id}`); toast.success("Question deleted"); load(); loadPubStatus(); } catch (e) { err(e); }
     };
+    const onQuestionChanged = () => { load(); loadPubStatus(); };
 
     if (!questions) return <Loading />;
     return (
         <div className="space-y-6">
+            {pubStatus && (
+                <div className={`retro-card p-4 flex flex-wrap items-center gap-3 justify-between ${pubStatus.published ? "bg-teal/20" : "bg-mustard"}`} data-testid="publish-leaderboard-card">
+                    <div>
+                        <div className="font-heading uppercase text-lg">Leaderboard Reveal · {pubStatus.date}</div>
+                        <div className="font-mono text-xs uppercase opacity-70 mt-1">
+                            {pubStatus.declared_questions}/{pubStatus.total_questions} questions declared
+                            {pubStatus.published && " · ✅ Published"}
+                        </div>
+                    </div>
+                    <button
+                        onClick={publish}
+                        disabled={!pubStatus.all_declared || publishing || pubStatus.published}
+                        className="btn-retro btn-brick !text-xs !py-2 !px-4 disabled:opacity-40 disabled:cursor-not-allowed"
+                        data-testid="publish-results-btn"
+                    >
+                        {pubStatus.published ? "Already Published ✓" : publishing ? "Publishing…" : "Publish Results →"}
+                    </button>
+                </div>
+            )}
+
             <form onSubmit={create} className="retro-card bg-white p-5" data-testid="create-question-form">
                 <h3 className="font-heading text-2xl uppercase mb-4">Publish a <span className="text-brick">Question</span></h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -444,7 +477,7 @@ function QuestionsTab() {
             </form>
 
             <div className="space-y-3" data-testid="admin-questions-list">
-                {questions.map((q) => <AdminQuestionRow key={q.id} q={q} fixtures={fixtures} onChanged={load} onDelete={() => remove(q.id)} />)}
+                {questions.map((q) => <AdminQuestionRow key={q.id} q={q} fixtures={fixtures} onChanged={onQuestionChanged} onDelete={() => remove(q.id)} />)}
                 {questions.length === 0 && <div className="ticket p-6 text-center opacity-60">No questions yet.</div>}
             </div>
         </div>
