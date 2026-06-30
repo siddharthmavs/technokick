@@ -4,7 +4,7 @@ import Header from "../components/Header";
 import { Footer } from "./Home";
 import api, { formatApiError } from "../lib/api";
 
-const TABS = ["Overview", "Registrations", "Matches", "Fixtures", "Questions", "Announcements", "Settings"];
+const TABS = ["Overview", "Users", "Registrations", "Matches", "Fixtures", "Questions", "Announcements", "Settings"];
 const ROUNDS = ["Group A", "Group B", "Group C", "Group D", "Group E", "Group F", "Group G", "Group H", "Round of 16", "Quarterfinal", "Semifinal", "Third Place", "Final"];
 const GROUP_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
@@ -31,6 +31,7 @@ export default function Admin() {
                 </div>
 
                 {tab === "Overview" && <OverviewTab />}
+                {tab === "Users" && <UsersTab />}
                 {tab === "Registrations" && <RegistrationsTab />}
                 {tab === "Matches" && <MatchesTab />}
                 {tab === "Fixtures" && <FixturesTab />}
@@ -67,6 +68,63 @@ function OverviewTab() {
                     <div className={`font-heading text-5xl mt-1 ${it.accent}`}>{it.value}</div>
                 </div>
             ))}
+        </div>
+    );
+}
+
+/* ---------------- USERS ---------------- */
+function UsersTab() {
+    const [users, setUsers] = useState(null);
+    const [query, setQuery] = useState("");
+    useEffect(() => { api.get("/admin/users").then((r) => setUsers(r.data)).catch(err); }, []);
+
+    if (!users) return <Loading />;
+
+    const q = query.trim().toLowerCase();
+    const filtered = q
+        ? users.filter((u) =>
+            u.name?.toLowerCase().includes(q) ||
+            u.phone?.toLowerCase().includes(q) ||
+            u.company?.toLowerCase().includes(q)
+        )
+        : users;
+
+    return (
+        <div className="space-y-5">
+            <div className="retro-card bg-mustard p-4 flex flex-wrap items-center gap-3 justify-between">
+                <div className="flex items-center gap-2">
+                    <span className="font-heading uppercase text-lg">All Signups</span>
+                    <span className="stamp !text-[10px]">{users.length} total</span>
+                </div>
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone, company…" className="input-retro !w-64" data-testid="users-search-input" />
+            </div>
+
+            <div className="retro-card bg-white overflow-x-auto" data-testid="admin-users-table">
+                <table className="w-full font-body text-sm">
+                    <thead className="bg-ink text-mustard">
+                        <tr className="text-left">
+                            {["Name", "Phone", "Company", "PS5 Registered", "Predictions Made", "Signed Up"].map((h) => (
+                                <th key={h} className="px-3 py-2 font-heading uppercase tracking-wider text-xs">{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.map((u) => (
+                            <tr key={u.id} className="border-t-2 border-ink/10" data-testid={`user-row-${u.id}`}>
+                                <td className="px-3 py-2 font-bold">{u.name}</td>
+                                <td className="px-3 py-2 font-mono text-xs">{u.phone || "—"}</td>
+                                <td className="px-3 py-2 font-mono text-xs uppercase">{u.company || "—"}</td>
+                                <td className="px-3 py-2">
+                                    <span className={`stamp !text-[10px] !py-0.5 !px-2 ${u.ps5_registered ? "stamp-teal" : ""}`}>{u.ps5_registered ? "YES" : "NO"}</span>
+                                </td>
+                                <td className="px-3 py-2 font-mono">{u.predictions_made}</td>
+                                <td className="px-3 py-2 font-mono text-[10px] opacity-60">{new Date(u.created_at).toLocaleDateString()}</td>
+                            </tr>
+                        ))}
+                        {filtered.length === 0 && <tr><td colSpan="6" className="px-3 py-6 text-center opacity-60">No users found.</td></tr>}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

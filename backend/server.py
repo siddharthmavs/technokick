@@ -533,6 +533,23 @@ async def get_tnc():
 # =========================================================
 # ============= ADMIN ENDPOINTS ===========================
 # =========================================================
+@api_router.get("/admin/users")
+async def admin_list_users(_: dict = Depends(require_admin)):
+    users = await db.users.find({"role": "user"}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(5000)
+    user_ids = [u["id"] for u in users]
+    regs = await db.ps5_registrations.find({"user_id": {"$in": user_ids}}, {"_id": 0, "user_id": 1}).to_list(5000)
+    registered_ids = {r["user_id"] for r in regs}
+    sub_counts = await db.submissions.aggregate([
+        {"$match": {"user_id": {"$in": user_ids}}},
+        {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+    ]).to_list(5000)
+    sub_count_map = {s["_id"]: s["count"] for s in sub_counts}
+    for u in users:
+        u["ps5_registered"] = u["id"] in registered_ids
+        u["predictions_made"] = sub_count_map.get(u["id"], 0)
+    return users
+
+
 @api_router.get("/admin/registrations")
 async def admin_registrations(_: dict = Depends(require_admin)):
     regs = await db.ps5_registrations.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
