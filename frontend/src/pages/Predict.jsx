@@ -60,6 +60,7 @@ export default function Predict() {
                     <div className="text-center mb-8">
                         <span className="stamp stamp-teal">Daily Predictions · {data?.date || ""}</span>
                         <h1 className="font-heading text-5xl md:text-6xl mt-3 uppercase">Call <span className="text-brick">The Shots</span></h1>
+                        <p className="font-body text-sm font-bold text-brick mt-2" data-testid="prize-banner">🏆 Top of the leaderboard wins exciting cash prizes worth ₹500!</p>
                         <div className="mt-3 flex items-center justify-center gap-3 flex-wrap">
                             <Countdown target={windowOpen ? predictionWindowClose() : predictionWindowOpen()} label={windowOpen ? "Window closes in" : "Window opens in"} />
                             <span className={`stamp ${windowOpen ? "stamp-teal" : "stamp-brick"}`} data-testid="window-status">{windowOpen ? "OPEN" : "CLOSED"}</span>

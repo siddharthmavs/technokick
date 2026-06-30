@@ -24,6 +24,7 @@ export default function Leaderboard() {
                     <span className="stamp stamp-brick">Prediction League · Top 10</span>
                     <h1 className="font-heading text-5xl md:text-7xl mt-3 uppercase">Hall of <span className="underline-wiggle">Fame</span></h1>
                     <p className="font-body opacity-70 mt-2">The sharpest football brains on campus. Could be you.</p>
+                    <p className="font-body text-sm font-bold text-brick mt-2" data-testid="leaderboard-prize-banner">🏆 The Number 1 spot wins exciting cash prizes worth ₹500!</p>
                     <p className="font-mono text-[11px] uppercase tracking-widest opacity-60 mt-2">Ties broken by earliest submission time ⏱</p>
                 </div>
 

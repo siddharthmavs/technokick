@@ -119,7 +119,7 @@ const marqueeItems = announcements.length > 0
                         <div className="absolute inset-0 stripes-bg opacity-[0.06]" />
                         <div className="relative">
                             <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase text-ink">Daily<br/>Prediction</h2>
-                            <p className="mt-4 font-body text-ink/80">4 questions a day on real World Cup matches. Window: 10AM–8PM IST. Score = glory. Win Exciting Prizes!</p>
+                            <p className="mt-4 font-body text-ink/80">5+ questions a day on real World Cup matches. Window: 10AM–8PM IST. Score = glory. Win Exciting Cash Prizes worth ₹500!</p>
                             <div className="mt-6 flex items-center justify-between">
                                 <Countdown target={isPredictionWindowOpen() ? predictionWindowClose() : predictionWindowOpen()} label={isPredictionWindowOpen() ? "Closes in" : "Opens in"} />
                                 <span className="btn-retro btn-ink !py-2 !px-4 !text-sm">Play →</span>
