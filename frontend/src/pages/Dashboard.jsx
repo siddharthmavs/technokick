@@ -78,7 +78,7 @@ export default function Dashboard() {
                             <table className="w-full font-body text-sm">
                                 <thead className="bg-ink text-mustard">
                                     <tr className="text-left">
-                                        {["Date", "Question", "Your Answer", "Status", "PTS"].map((h) => (
+                                        {["Date", "Question", "Your Answer", "Correct Answer", "Status", "PTS"].map((h) => (
                                             <th key={h} className="px-3 py-2 font-heading uppercase tracking-wider text-xs">{h}</th>
                                         ))}
                                     </tr>
@@ -87,10 +87,11 @@ export default function Dashboard() {
                                     {subs.map((s) => {
                                         const q = hist.questions[s.question_id];
                                         return (
-                                            <tr key={s.id || s.question_id} className="border-t-2 border-ink/10">
+                                            <tr key={s.id || s.question_id} className="border-t-2 border-ink/10" data-testid={`history-row-${s.question_id}`}>
                                                 <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{s.date}</td>
                                                 <td className="px-3 py-2">{q?.text || "—"}</td>
                                                 <td className="px-3 py-2 font-bold">{fmtAnswer(s.answer)}</td>
+                                                <td className="px-3 py-2 font-bold text-teal">{q?.results_entered ? fmtAnswer(q.correct_answer) : "—"}</td>
                                                 <td className="px-3 py-2">
                                                     {q?.results_entered ? (
                                                         <span className={`stamp !text-[10px] !py-0.5 !px-2 ${s.points_earned > 0 ? "stamp-teal" : "stamp-brick"}`}>{s.points_earned > 0 ? "CORRECT" : "MISSED"}</span>

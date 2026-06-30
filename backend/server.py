@@ -689,6 +689,16 @@ async def admin_list_questions(_: dict = Depends(require_admin)):
     return qs
 
 
+@api_router.put("/admin/questions/{qid}")
+async def admin_update_question(qid: str, data: QuestionIn, _: dict = Depends(require_admin)):
+    q = await db.questions.find_one({"id": qid})
+    if not q:
+        raise HTTPException(status_code=404, detail="Question not found")
+    await db.questions.update_one({"id": qid}, {"$set": data.model_dump()})
+    updated = await db.questions.find_one({"id": qid}, {"_id": 0})
+    return updated
+
+
 @api_router.delete("/admin/questions/{qid}")
 async def admin_delete_question(qid: str, _: dict = Depends(require_admin)):
     await db.questions.delete_one({"id": qid})

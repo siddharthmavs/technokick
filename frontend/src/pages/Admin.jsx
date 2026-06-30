@@ -386,15 +386,18 @@ function QuestionsTab() {
             </form>
 
             <div className="space-y-3" data-testid="admin-questions-list">
-                {questions.map((q) => <AdminQuestionRow key={q.id} q={q} onChanged={load} onDelete={() => remove(q.id)} />)}
+                {questions.map((q) => <AdminQuestionRow key={q.id} q={q} fixtures={fixtures} onChanged={load} onDelete={() => remove(q.id)} />)}
                 {questions.length === 0 && <div className="ticket p-6 text-center opacity-60">No questions yet.</div>}
             </div>
         </div>
     );
 }
 
-function AdminQuestionRow({ q, onChanged, onDelete }) {
+function AdminQuestionRow({ q, fixtures, onChanged, onDelete }) {
     const [open, setOpen] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [editForm, setEditForm] = useState(null);
+    const [saving, setSaving] = useState(false);
     const [choice, setChoice] = useState("");
     const [scoreAns, setScoreAns] = useState({ a: "", b: "" });
     const [multi, setMulti] = useState([]);
@@ -419,6 +422,81 @@ function AdminQuestionRow({ q, onChanged, onDelete }) {
         } catch (e) { err(e); }
     };
 
+    const startEdit = () => {
+        setEditForm({
+            date: q.date,
+            fixture_id: q.fixture_id,
+            text: q.text,
+            type: q.type,
+            options: (q.options || []).join(", "),
+            points: q.points,
+            order: q.order,
+        });
+        setEditing(true);
+    };
+
+    const saveEdit = async () => {
+        if (!editForm.fixture_id) { toast.error("Pick a fixture first"); return; }
+        setSaving(true);
+        try {
+            await api.put(`/admin/questions/${q.id}`, {
+                ...editForm,
+                points: Number(editForm.points),
+                order: Number(editForm.order),
+                options: editForm.type === "numeric_score" || editForm.type === "text" ? [] : editForm.type === "radio" ? ["Yes", "No"] : editForm.options.split(",").map((s) => s.trim()).filter(Boolean),
+            });
+            toast.success("Question updated");
+            setEditing(false);
+            onChanged();
+        } catch (e) { err(e); } finally { setSaving(false); }
+    };
+
+    if (editing && editForm) {
+        return (
+            <div className="retro-card bg-white p-4" data-testid={`admin-question-edit-${q.id}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div><label className="label-retro">Date</label><input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="input-retro" data-testid={`edit-date-${q.id}`} /></div>
+                    <div>
+                        <label className="label-retro">Fixture</label>
+                        <select value={editForm.fixture_id} onChange={(e) => setEditForm({ ...editForm, fixture_id: e.target.value })} className="input-retro" data-testid={`edit-fixture-${q.id}`}>
+                            <option value="">— Select fixture —</option>
+                            {fixtures.map((f) => <option key={f.id} value={f.id}>{f.team_a} vs {f.team_b} ({f.stage})</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="label-retro">Type</label>
+                        <select value={editForm.type} onChange={(e) => {
+                            const t = e.target.value;
+                            setEditForm({ ...editForm, type: t, options: t === "radio" ? "Yes, No" : t === "numeric_score" || t === "text" ? "" : editForm.options });
+                        }} className="input-retro" data-testid={`edit-type-${q.id}`}>
+                            <option value="dropdown">Dropdown (single pick)</option>
+                            <option value="radio">Yes / No (radio)</option>
+                            <option value="numeric_score">Exact Scoreline</option>
+                            <option value="multi_select">Multi-select (scorers)</option>
+                            <option value="text">Free Text</option>
+                        </select>
+                    </div>
+                    <div className="md:col-span-2"><label className="label-retro">Question Text</label><input value={editForm.text} onChange={(e) => setEditForm({ ...editForm, text: e.target.value })} className="input-retro" data-testid={`edit-text-${q.id}`} /></div>
+                    {editForm.type !== "numeric_score" && editForm.type !== "text" && (
+                        <div className="md:col-span-2 lg:col-span-1">
+                            <label className="label-retro">Options (comma separated)</label>
+                            <input value={editForm.options} onChange={(e) => setEditForm({ ...editForm, options: e.target.value })} readOnly={editForm.type === "radio"} className={`input-retro ${editForm.type === "radio" ? "opacity-60 cursor-not-allowed" : ""}`} data-testid={`edit-options-${q.id}`} />
+                        </div>
+                    )}
+                    <div><label className="label-retro">Points</label><input type="number" min="1" value={editForm.points} onChange={(e) => setEditForm({ ...editForm, points: e.target.value })} className="input-retro" data-testid={`edit-points-${q.id}`} /></div>
+                    <div><label className="label-retro">Order</label><input type="number" min="0" value={editForm.order} onChange={(e) => setEditForm({ ...editForm, order: e.target.value })} className="input-retro" data-testid={`edit-order-${q.id}`} /></div>
+                </div>
+                {q.results_entered && (
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-brick mt-3">⚠ Results already declared for this question — submissions won't be re-scored automatically if you change type/options.</p>
+                )}
+                <div className="flex gap-2 mt-4">
+                    <button onClick={saveEdit} disabled={saving} className="btn-retro btn-brick !text-xs !py-2 !px-3" data-testid={`save-edit-${q.id}`}>{saving ? "Saving…" : "Save Changes"}</button>
+                    <button onClick={() => setEditing(false)} className="btn-retro !text-xs !py-2 !px-3" data-testid={`cancel-edit-${q.id}`}>Cancel</button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="retro-card bg-white p-4" data-testid={`admin-question-${q.id}`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -432,6 +510,7 @@ function AdminQuestionRow({ q, onChanged, onDelete }) {
                     ) : (
                         <button onClick={() => setOpen(!open)} className="btn-retro btn-ink !text-xs !py-2 !px-3" data-testid={`declare-result-btn-${q.id}`}>Declare Result</button>
                     )}
+                    <button onClick={startEdit} className="btn-retro !text-xs !py-2 !px-3" data-testid={`edit-question-${q.id}`}>Edit</button>
                     <button onClick={onDelete} className="btn-retro !text-xs !py-2 !px-3" data-testid={`delete-question-${q.id}`}>✕</button>
                 </div>
             </div>
