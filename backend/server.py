@@ -213,6 +213,7 @@ class QuestionIn(BaseModel):
     options: List[str] = Field(default_factory=list)
     points: int = 10
     order: int = 0
+    status: Literal["draft", "live"] = "draft"  # draft = scheduled; auto-goes live at 10AM IST
 
 
 class QuestionResultIn(BaseModel):
@@ -429,7 +430,15 @@ async def list_fixtures():
 @api_router.get("/predictions/today")
 async def predictions_today(user: dict = Depends(get_current_user)):
     today = today_ist_str()
-    questions = await db.questions.find({"date": today}, {"_id": 0}).sort("order", 1).to_list(50)
+    now_ist = now_utc() + IST_OFFSET
+    # Auto-publish any scheduled drafts once 10AM IST arrives
+    if now_ist.hour >= 10:
+        await db.questions.update_many({"date": today, "status": "draft"}, {"$set": {"status": "live"}})
+    # include "live" questions + legacy docs that have no status field yet
+    questions = await db.questions.find(
+        {"date": today, "$or": [{"status": "live"}, {"status": {"$exists": False}}]},
+        {"_id": 0}
+    ).sort("order", 1).to_list(50)
     # attach fixtures
     fixture_ids = list({q["fixture_id"] for q in questions})
     fixtures = {f["id"]: f for f in await db.fixtures.find({"id": {"$in": fixture_ids}}, {"_id": 0}).to_list(50)}
@@ -770,7 +779,7 @@ async def admin_create_question(data: QuestionIn, _: dict = Depends(require_admi
 
 @api_router.get("/admin/questions")
 async def admin_list_questions(_: dict = Depends(require_admin)):
-    qs = await db.questions.find({}, {"_id": 0}).sort("date", -1).to_list(500)
+    qs = await db.questions.find({}, {"_id": 0}).sort([("date", 1), ("order", 1)]).to_list(500)
     return qs
 
 
@@ -782,6 +791,24 @@ async def admin_update_question(qid: str, data: QuestionIn, _: dict = Depends(re
     await db.questions.update_one({"id": qid}, {"$set": data.model_dump()})
     updated = await db.questions.find_one({"id": qid}, {"_id": 0})
     return updated
+
+
+@api_router.patch("/admin/questions/{qid}/go-live")
+async def admin_publish_single_question(qid: str, _: dict = Depends(require_admin)):
+    result = await db.questions.update_one({"id": qid}, {"$set": {"status": "live"}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return {"ok": True}
+
+
+class PublishDateQuestionsIn(BaseModel):
+    date: str
+
+
+@api_router.post("/admin/questions/publish-date")
+async def admin_publish_date_questions(data: PublishDateQuestionsIn, _: dict = Depends(require_admin)):
+    result = await db.questions.update_many({"date": data.date, "status": "draft"}, {"$set": {"status": "live"}})
+    return {"ok": True, "published": result.modified_count}
 
 
 @api_router.delete("/admin/questions/{qid}")
@@ -833,7 +860,11 @@ async def admin_enter_result(qid: str, data: QuestionResultIn, _: dict = Depends
 @api_router.get("/admin/predictions/publish-status")
 async def admin_publish_status(date: Optional[str] = None, _: dict = Depends(require_admin)):
     target = date or today_ist_str()
-    qs = await db.questions.find({"date": target}, {"_id": 0, "results_entered": 1}).to_list(200)
+    # Only count live questions (drafts haven't been seen by users yet)
+    qs = await db.questions.find(
+        {"date": target, "$or": [{"status": "live"}, {"status": {"$exists": False}}]},
+        {"_id": 0, "results_entered": 1}
+    ).to_list(200)
     total = len(qs)
     declared = sum(1 for q in qs if q.get("results_entered"))
     pub = await db.leaderboard_publishes.find_one({"date": target}, {"_id": 0})

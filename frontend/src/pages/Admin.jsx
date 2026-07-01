@@ -371,9 +371,10 @@ function QuestionsTab() {
     const [fixtures, setFixtures] = useState([]);
     const [pubStatus, setPubStatus] = useState(null);
     const [publishing, setPublishing] = useState(false);
+    const [publishingDate, setPublishingDate] = useState(null); // date being "go-live"d
     const today = todayIstDateStr();
     const [pubDate, setPubDate] = useState(today);
-    const empty = { date: today, fixture_id: "", text: "", type: "dropdown", options: "", points: 10, order: 1 };
+    const empty = { date: today, fixture_id: "", text: "", type: "dropdown", options: "", points: 10, order: 1, status: "draft" };
     const [form, setForm] = useState(empty);
 
     const load = () => api.get("/admin/questions").then((r) => setQuestions(r.data)).catch(err);
@@ -394,6 +395,15 @@ function QuestionsTab() {
         } catch (e) { err(e); } finally { setPublishing(false); }
     };
 
+    const publishAllDrafts = async (date) => {
+        setPublishingDate(date);
+        try {
+            const r = await api.post("/admin/questions/publish-date", { date });
+            toast.success(`✅ ${r.data.published} question(s) on ${date} are now live!`);
+            load();
+        } catch (e) { err(e); } finally { setPublishingDate(null); }
+    };
+
     const create = async (e) => {
         e.preventDefault();
         if (!form.fixture_id) { toast.error("Pick a fixture first"); return; }
@@ -404,8 +414,8 @@ function QuestionsTab() {
                 order: Number(form.order),
                 options: form.type === "numeric_score" || form.type === "text" ? [] : form.type === "radio" ? ["Yes", "No"] : form.options.split(",").map((s) => s.trim()).filter(Boolean),
             });
-            toast.success("Question published!");
-            setForm({ ...empty, fixture_id: form.fixture_id });
+            toast.success(form.status === "draft" ? "Question saved as draft — auto-publishes at 10AM IST." : "Question is live!");
+            setForm({ ...empty, date: form.date, fixture_id: form.fixture_id });
             load();
             loadPubStatus();
         } catch (e2) { err(e2); }
@@ -416,9 +426,17 @@ function QuestionsTab() {
     };
     const onQuestionChanged = () => { load(); loadPubStatus(); };
 
+    // Group questions by date
+    const byDate = (questions || []).reduce((acc, q) => {
+        (acc[q.date] = acc[q.date] || []).push(q);
+        return acc;
+    }, {});
+    const dates = Object.keys(byDate).sort();
+
     if (!questions) return <Loading />;
     return (
         <div className="space-y-6">
+            {/* LEADERBOARD PUBLISH CARD */}
             {pubStatus && (
                 <div className={`retro-card p-4 flex flex-wrap items-center gap-4 justify-between ${pubStatus.published ? "bg-teal/20" : "bg-mustard"}`} data-testid="publish-leaderboard-card">
                     <div className="flex flex-wrap items-center gap-4">
@@ -431,28 +449,19 @@ function QuestionsTab() {
                         </div>
                         <div>
                             <label className="label-retro !text-[10px]">Date to publish</label>
-                            <input
-                                type="date"
-                                value={pubDate}
-                                onChange={(e) => onPubDateChange(e.target.value)}
-                                className="input-retro !py-1 !text-sm"
-                                data-testid="publish-date-picker"
-                            />
+                            <input type="date" value={pubDate} onChange={(e) => onPubDateChange(e.target.value)} className="input-retro !py-1 !text-sm" data-testid="publish-date-picker" />
                         </div>
                     </div>
-                    <button
-                        onClick={publish}
-                        disabled={!pubStatus.all_declared || publishing || pubStatus.published}
-                        className="btn-retro btn-brick !text-xs !py-2 !px-4 disabled:opacity-40 disabled:cursor-not-allowed"
-                        data-testid="publish-results-btn"
-                    >
+                    <button onClick={publish} disabled={!pubStatus.all_declared || publishing || pubStatus.published}
+                        className="btn-retro btn-brick !text-xs !py-2 !px-4 disabled:opacity-40 disabled:cursor-not-allowed" data-testid="publish-results-btn">
                         {pubStatus.published ? "Already Published ✓" : publishing ? "Publishing…" : "Publish Results →"}
                     </button>
                 </div>
             )}
 
+            {/* ADD QUESTION FORM */}
             <form onSubmit={create} className="retro-card bg-white p-5" data-testid="create-question-form">
-                <h3 className="font-heading text-2xl uppercase mb-4">Publish a <span className="text-brick">Question</span></h3>
+                <h3 className="font-heading text-2xl uppercase mb-4">Add a <span className="text-brick">Question</span></h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     <div><label className="label-retro">Date</label><input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="input-retro" data-testid="question-date" /></div>
                     <div>
@@ -485,18 +494,65 @@ function QuestionsTab() {
                     )}
                     {form.type === "text" && (
                         <div className="md:col-span-2 lg:col-span-1 flex items-end">
-                            <p className="font-mono text-[10px] uppercase tracking-widest opacity-60">Players type any answer — graded by exact text match (case-insensitive) when you declare the result.</p>
+                            <p className="font-mono text-[10px] uppercase tracking-widest opacity-60">Players type any answer — graded by exact text match (case-insensitive).</p>
                         </div>
                     )}
                     <div><label className="label-retro">Points</label><input type="number" min="1" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} className="input-retro" data-testid="question-points" /></div>
                     <div><label className="label-retro">Order</label><input type="number" min="0" value={form.order} onChange={(e) => setForm({ ...form, order: e.target.value })} className="input-retro" data-testid="question-order" /></div>
-                    <div className="flex items-end"><button className="btn-retro btn-brick w-full !text-sm" data-testid="question-create-btn">+ Publish</button></div>
+                    {/* PUBLISH MODE TOGGLE */}
+                    <div className="md:col-span-2 lg:col-span-3">
+                        <label className="label-retro">Publish Mode</label>
+                        <div className="inline-flex border-2 border-ink shadow-retro-sm mt-1" data-testid="question-status-toggle">
+                            <button type="button" onClick={() => setForm({ ...form, status: "draft" })}
+                                className={`px-4 py-2 font-heading text-xs uppercase tracking-wider ${form.status === "draft" ? "bg-ink text-mustard" : "bg-white hover:bg-mustard/30"}`}
+                                data-testid="status-draft-btn">
+                                📅 Schedule (auto-publish 10AM IST)
+                            </button>
+                            <button type="button" onClick={() => setForm({ ...form, status: "live" })}
+                                className={`px-4 py-2 font-heading text-xs uppercase tracking-wider border-l-2 border-ink ${form.status === "live" ? "bg-teal text-white" : "bg-white hover:bg-mustard/30"}`}
+                                data-testid="status-live-btn">
+                                ⚡ Publish Now (live)
+                            </button>
+                        </div>
+                        {form.status === "draft" && <p className="font-mono text-[10px] uppercase tracking-widest opacity-60 mt-1">Saved as draft — users can't see it until you go live manually or 10AM IST on the question's date.</p>}
+                    </div>
+                    <div className="flex items-end"><button className="btn-retro btn-brick w-full !text-sm" data-testid="question-create-btn">+ Save</button></div>
                 </div>
             </form>
 
-            <div className="space-y-3" data-testid="admin-questions-list">
-                {questions.map((q) => <AdminQuestionRow key={q.id} q={q} fixtures={fixtures} onChanged={onQuestionChanged} onDelete={() => remove(q.id)} />)}
-                {questions.length === 0 && <div className="ticket p-6 text-center opacity-60">No questions yet.</div>}
+            {/* QUESTIONS GROUPED BY DATE */}
+            <div className="space-y-8" data-testid="admin-questions-list">
+                {dates.length === 0 && <div className="ticket p-6 text-center opacity-60">No questions yet.</div>}
+                {dates.map((date) => {
+                    const qs = byDate[date];
+                    const draftCount = qs.filter((q) => q.status === "draft").length;
+                    const liveCount = qs.filter((q) => q.status !== "draft").length;
+                    return (
+                        <div key={date} data-testid={`date-group-${date}`}>
+                            {/* Date group header */}
+                            <div className="flex items-center justify-between flex-wrap gap-3 mb-3 pb-2 border-b-2 border-ink">
+                                <div className="flex items-center gap-3">
+                                    <h3 className="font-heading text-xl uppercase">{date}</h3>
+                                    <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">{liveCount} live · {draftCount} draft</span>
+                                    {date === today && <span className="stamp stamp-teal !text-[10px]">Today</span>}
+                                    {date > today && <span className="stamp !text-[10px]">Upcoming</span>}
+                                </div>
+                                {draftCount > 0 && (
+                                    <button
+                                        onClick={() => publishAllDrafts(date)}
+                                        disabled={publishingDate === date}
+                                        className="btn-retro btn-teal !text-xs !py-1.5 !px-3 disabled:opacity-40"
+                                        data-testid={`publish-all-drafts-${date}`}>
+                                        {publishingDate === date ? "Going live…" : `⚡ Go Live — ${draftCount} draft${draftCount > 1 ? "s" : ""}`}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="space-y-3">
+                                {qs.map((q) => <AdminQuestionRow key={q.id} q={q} fixtures={fixtures} onChanged={onQuestionChanged} onDelete={() => remove(q.id)} />)}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -507,9 +563,19 @@ function AdminQuestionRow({ q, fixtures, onChanged, onDelete }) {
     const [editing, setEditing] = useState(false);
     const [editForm, setEditForm] = useState(null);
     const [saving, setSaving] = useState(false);
+    const [goingLive, setGoingLive] = useState(false);
     const [choice, setChoice] = useState("");
     const [scoreAns, setScoreAns] = useState({ a: "", b: "" });
     const [multi, setMulti] = useState([]);
+
+    const goLive = async () => {
+        setGoingLive(true);
+        try {
+            await api.patch(`/admin/questions/${q.id}/go-live`);
+            toast.success("Question is now live!");
+            onChanged();
+        } catch (e) { err(e); } finally { setGoingLive(false); }
+    };
 
     const declare = async () => {
         let correct;
@@ -540,6 +606,7 @@ function AdminQuestionRow({ q, fixtures, onChanged, onDelete }) {
             options: (q.options || []).join(", "),
             points: q.points,
             order: q.order,
+            status: q.status || "live",
         });
         setEditing(true);
     };
@@ -552,6 +619,7 @@ function AdminQuestionRow({ q, fixtures, onChanged, onDelete }) {
                 ...editForm,
                 points: Number(editForm.points),
                 order: Number(editForm.order),
+                status: editForm.status || "live",
                 options: editForm.type === "numeric_score" || editForm.type === "text" ? [] : editForm.type === "radio" ? ["Yes", "No"] : editForm.options.split(",").map((s) => s.trim()).filter(Boolean),
             });
             toast.success("Question updated");
@@ -606,19 +674,34 @@ function AdminQuestionRow({ q, fixtures, onChanged, onDelete }) {
         );
     }
 
+    const isDraft = q.status === "draft";
+
     return (
-        <div className="retro-card bg-white p-4" data-testid={`admin-question-${q.id}`}>
+        <div className={`retro-card p-4 ${isDraft ? "bg-ink/5 border-dashed" : "bg-white"}`} data-testid={`admin-question-${q.id}`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
-                    <div className="font-bold font-body">{q.text}</div>
-                    <div className="font-mono text-[10px] uppercase opacity-60 mt-1">{q.date} · {q.type} · {q.points} pts</div>
+                <div className="min-w-0 flex items-start gap-2">
+                    {isDraft && <span className="stamp !text-[9px] !py-0.5 !px-1.5 shrink-0 mt-0.5" data-testid={`draft-badge-${q.id}`}>DRAFT</span>}
+                    <div>
+                        <div className="font-bold font-body">{q.text}</div>
+                        <div className="font-mono text-[10px] uppercase opacity-60 mt-1">
+                            {q.date} · {q.type} · {q.points} pts
+                            {isDraft && " · auto-publishes 10AM IST"}
+                        </div>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    {q.results_entered ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                    {isDraft && (
+                        <button onClick={goLive} disabled={goingLive}
+                            className="btn-retro btn-teal !text-xs !py-2 !px-3 disabled:opacity-40"
+                            data-testid={`go-live-btn-${q.id}`}>
+                            {goingLive ? "Going live…" : "⚡ Go Live"}
+                        </button>
+                    )}
+                    {!isDraft && (q.results_entered ? (
                         <span className="stamp stamp-teal !text-[10px]" data-testid={`result-declared-${q.id}`}>RESULT: {Array.isArray(q.correct_answer) ? q.correct_answer.join(", ") : typeof q.correct_answer === "object" && q.correct_answer ? `${q.correct_answer.a}-${q.correct_answer.b}` : String(q.correct_answer)}</span>
                     ) : (
                         <button onClick={() => setOpen(!open)} className="btn-retro btn-ink !text-xs !py-2 !px-3" data-testid={`declare-result-btn-${q.id}`}>Declare Result</button>
-                    )}
+                    ))}
                     <button onClick={startEdit} className="btn-retro !text-xs !py-2 !px-3" data-testid={`edit-question-${q.id}`}>Edit</button>
                     <button onClick={onDelete} className="btn-retro !text-xs !py-2 !px-3" data-testid={`delete-question-${q.id}`}>✕</button>
                 </div>
