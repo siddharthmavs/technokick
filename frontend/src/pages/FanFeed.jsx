@@ -5,7 +5,7 @@ import { Footer } from "./Home";
 import api, { formatApiError } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = "https://technokick.mav-s.com";
 const PAGE_SIZE = 10;
 
 function timeAgo(iso) {
