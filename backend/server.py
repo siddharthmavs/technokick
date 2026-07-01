@@ -19,8 +19,9 @@ import jwt
 import bcrypt
 import httpx
 import pandas as pd
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, status, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, status, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pywebpush import webpush, WebPushException
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -997,6 +998,217 @@ async def admin_stats(_: dict = Depends(require_admin)):
     }
 
 
+# ---------- Fan Feed ----------
+UPLOADS_DIR = ROOT_DIR / "uploads" / "fan"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+async def _fan_profile(user: dict) -> dict:
+    p = await db.fan_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    return p
+
+
+@api_router.get("/fan/profile")
+async def fan_get_profile(user: dict = Depends(get_current_user)):
+    p = await _fan_profile(user)
+    return p or {}
+
+
+@api_router.post("/fan/profile")
+async def fan_create_profile(payload: dict, user: dict = Depends(get_current_user)):
+    nickname = (payload.get("nickname") or "").strip()
+    if len(nickname) < 2 or len(nickname) > 24:
+        raise HTTPException(status_code=400, detail="Nickname must be 2–24 characters.")
+    if not nickname.replace("_", "").replace("-", "").isalnum():
+        raise HTTPException(status_code=400, detail="Nickname can only contain letters, numbers, - and _.")
+    existing = await db.fan_profiles.find_one({"user_id": user["id"]})
+    if existing:
+        raise HTTPException(status_code=400, detail="You already have a nickname.")
+    try:
+        doc = {"id": str(uuid.uuid4()), "user_id": user["id"], "nickname": nickname, "created_at": now_utc().isoformat()}
+        await db.fan_profiles.insert_one(doc)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="That nickname is already taken. Try another.")
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+
+@api_router.get("/fan/posts")
+async def fan_list_posts(page: int = 1, page_size: int = 10, user: dict = Depends(get_current_user)):
+    page = max(1, page)
+    skip = (page - 1) * page_size
+    total = await db.fan_posts.count_documents({})
+    posts = await db.fan_posts.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(page_size).to_list(page_size)
+    uid = user["id"]
+    for p in posts:
+        p["liked"] = uid in p.get("likes", [])
+        p["like_count"] = len(p.get("likes", []))
+        p.pop("likes", None)
+        p["comment_count"] = await db.fan_comments.count_documents({"post_id": p["id"], "parent_id": None})
+    return {"total": total, "page": page, "page_size": page_size, "posts": posts}
+
+
+@api_router.post("/fan/posts")
+async def fan_create_post(
+    content: str = Form(""),
+    image: UploadFile = File(None),
+    user: dict = Depends(get_current_user),
+):
+    profile = await _fan_profile(user)
+    if not profile:
+        raise HTTPException(status_code=403, detail="Set a nickname before posting.")
+    content = content.strip()
+    image_url = None
+    if image and image.filename:
+        if image.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=400, detail="Only JPEG, PNG, GIF, and WebP images are allowed.")
+        data = await image.read()
+        if len(data) > MAX_IMAGE_BYTES:
+            raise HTTPException(status_code=400, detail="Image must be under 5 MB.")
+        ext = image.filename.rsplit(".", 1)[-1].lower() if "." in image.filename else "jpg"
+        filename = f"{uuid.uuid4()}.{ext}"
+        (UPLOADS_DIR / filename).write_bytes(data)
+        image_url = f"/uploads/fan/{filename}"
+    if not content and not image_url:
+        raise HTTPException(status_code=400, detail="Post must have text or an image.")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "nickname": profile["nickname"],
+        "content": content,
+        "image_url": image_url,
+        "likes": [],
+        "created_at": now_utc().isoformat(),
+    }
+    await db.fan_posts.insert_one(doc)
+    result = {k: v for k, v in doc.items() if k != "_id"}
+    result["liked"] = False
+    result["like_count"] = 0
+    result["comment_count"] = 0
+    result.pop("likes", None)
+    return result
+
+
+@api_router.delete("/fan/posts/{post_id}")
+async def fan_delete_post(post_id: str, user: dict = Depends(get_current_user)):
+    post = await db.fan_posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found.")
+    if post["user_id"] != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not your post.")
+    if post.get("image_url"):
+        fname = post["image_url"].split("/")[-1]
+        fpath = UPLOADS_DIR / fname
+        if fpath.exists():
+            fpath.unlink()
+    await db.fan_posts.delete_one({"id": post_id})
+    await db.fan_comments.delete_many({"post_id": post_id})
+    return {"ok": True}
+
+
+@api_router.post("/fan/posts/{post_id}/like")
+async def fan_toggle_post_like(post_id: str, user: dict = Depends(get_current_user)):
+    profile = await _fan_profile(user)
+    if not profile:
+        raise HTTPException(status_code=403, detail="Set a nickname first.")
+    post = await db.fan_posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found.")
+    uid = user["id"]
+    if uid in post.get("likes", []):
+        await db.fan_posts.update_one({"id": post_id}, {"$pull": {"likes": uid}})
+        liked = False
+    else:
+        await db.fan_posts.update_one({"id": post_id}, {"$addToSet": {"likes": uid}})
+        liked = True
+    updated = await db.fan_posts.find_one({"id": post_id})
+    return {"liked": liked, "like_count": len(updated.get("likes", []))}
+
+
+@api_router.get("/fan/posts/{post_id}/comments")
+async def fan_list_comments(post_id: str, user: dict = Depends(get_current_user)):
+    all_comments = await db.fan_comments.find({"post_id": post_id}, {"_id": 0}).sort("created_at", 1).to_list(500)
+    uid = user["id"]
+    for c in all_comments:
+        c["liked"] = uid in c.get("likes", [])
+        c["like_count"] = len(c.get("likes", []))
+        c.pop("likes", None)
+    # nest replies under their parent
+    by_id = {c["id"]: {**c, "replies": []} for c in all_comments}
+    top_level = []
+    for c in all_comments:
+        if c.get("parent_id") and c["parent_id"] in by_id:
+            by_id[c["parent_id"]]["replies"].append(by_id[c["id"]])
+        else:
+            top_level.append(by_id[c["id"]])
+    return top_level
+
+
+@api_router.post("/fan/posts/{post_id}/comments")
+async def fan_add_comment(post_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    profile = await _fan_profile(user)
+    if not profile:
+        raise HTTPException(status_code=403, detail="Set a nickname first.")
+    content = (payload.get("content") or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Comment cannot be empty.")
+    if len(content) > 500:
+        raise HTTPException(status_code=400, detail="Comment too long (max 500 chars).")
+    parent_id = payload.get("parent_id")
+    if parent_id:
+        parent = await db.fan_comments.find_one({"id": parent_id, "post_id": post_id})
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent comment not found.")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "post_id": post_id,
+        "parent_id": parent_id,
+        "user_id": user["id"],
+        "nickname": profile["nickname"],
+        "content": content,
+        "likes": [],
+        "created_at": now_utc().isoformat(),
+    }
+    await db.fan_comments.insert_one(doc)
+    result = {k: v for k, v in doc.items() if k != "_id"}
+    result["liked"] = False
+    result["like_count"] = 0
+    result["replies"] = []
+    result.pop("likes", None)
+    return result
+
+
+@api_router.delete("/fan/comments/{comment_id}")
+async def fan_delete_comment(comment_id: str, user: dict = Depends(get_current_user)):
+    c = await db.fan_comments.find_one({"id": comment_id})
+    if not c:
+        raise HTTPException(status_code=404, detail="Comment not found.")
+    if c["user_id"] != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not your comment.")
+    await db.fan_comments.delete_many({"$or": [{"id": comment_id}, {"parent_id": comment_id}]})
+    return {"ok": True}
+
+
+@api_router.post("/fan/comments/{comment_id}/like")
+async def fan_toggle_comment_like(comment_id: str, user: dict = Depends(get_current_user)):
+    profile = await _fan_profile(user)
+    if not profile:
+        raise HTTPException(status_code=403, detail="Set a nickname first.")
+    c = await db.fan_comments.find_one({"id": comment_id})
+    if not c:
+        raise HTTPException(status_code=404, detail="Comment not found.")
+    uid = user["id"]
+    if uid in c.get("likes", []):
+        await db.fan_comments.update_one({"id": comment_id}, {"$pull": {"likes": uid}})
+        liked = False
+    else:
+        await db.fan_comments.update_one({"id": comment_id}, {"$addToSet": {"likes": uid}})
+        liked = True
+    updated = await db.fan_comments.find_one({"id": comment_id})
+    return {"liked": liked, "like_count": len(updated.get("likes", []))}
+
+
 # ---------- Seed Function ----------
 DEFAULT_TNC = """\
 **TechnoKick 2026 — PS5 FIFA Tournament Terms & Conditions**
@@ -1023,6 +1235,10 @@ async def seed_database():
     await db.questions.create_index("date")
     await db.submissions.create_index([("user_id", 1), ("question_id", 1)], unique=True)
     await db.leaderboard_publishes.create_index("date", unique=True)
+    await db.fan_profiles.create_index("user_id", unique=True)
+    await db.fan_profiles.create_index("nickname", unique=True)
+    await db.fan_posts.create_index("created_at")
+    await db.fan_comments.create_index([("post_id", 1), ("created_at", 1)])
 
     # Admin
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@technokick.com").lower()
@@ -1069,6 +1285,7 @@ async def root():
 
 # Register
 app.include_router(api_router)
+app.mount("/uploads", StaticFiles(directory=str(ROOT_DIR / "uploads")), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

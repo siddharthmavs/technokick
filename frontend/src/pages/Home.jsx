@@ -37,6 +37,10 @@ export default function Home() {
         if (!user) navigate("/login?next=/predict");
         else navigate("/predict");
     };
+    const onFanClick = () => {
+        if (!user) navigate("/login?next=/fan");
+        else navigate("/fan");
+    };
 
 const marqueeItems = announcements.length > 0
   ? [
@@ -123,6 +127,18 @@ const marqueeItems = announcements.length > 0
                             <div className="mt-6 flex items-center justify-between">
                                 <Countdown target={isPredictionWindowOpen() ? predictionWindowClose() : predictionWindowOpen()} label={isPredictionWindowOpen() ? "Closes in" : "Opens in"} />
                                 <span className="btn-retro btn-ink !py-2 !px-4 !text-sm">Play →</span>
+                            </div>
+                        </div>
+                    </button>
+                    {/* Fan Fight Card */}
+                    <button onClick={onFanClick} className="text-left retro-card retro-card-hover p-6 md:p-8 relative overflow-hidden bg-ink text-cream" data-testid="fan-card">
+                        <div className="absolute top-4 right-4 stamp stamp-brick rotate-[-6deg]">MEME · ZONE</div>
+                        <div className="relative">
+                            <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase">Fan <br/>Fight 🔥</h2>
+                            <p className="mt-4 font-body text-cream/80">Drop your hottest takes, meme captions, and trash talk. Pick a fighter name and join the chaos!</p>
+                            <div className="mt-6 flex items-center justify-between">
+                                <span className="font-mono text-xs uppercase tracking-widest text-cream/50">Anonymous · Fun · Unfiltered</span>
+                                <span className="btn-retro btn-brick !py-2 !px-4 !text-sm">Join Now →</span>
                             </div>
                         </div>
                     </button>

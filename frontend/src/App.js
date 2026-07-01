@@ -14,6 +14,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Bracket from "./pages/Bracket";
 import FAQ from "./pages/FAQ";
 import Admin from "./pages/Admin";
+import FanFeed from "./pages/FanFeed";
 
 function Splash() {
     return (
@@ -58,6 +59,7 @@ export default function App() {
                     <Route path="/faq" element={<FAQ />} />
                     <Route path="/ps5/terms" element={<PS5Terms />} />
                     <Route path="/ps5/register" element={<RequireUser><PS5Register /></RequireUser>} />
+                    <Route path="/fan" element={<RequireUser><FanFeed /></RequireUser>} />
                     <Route path="/predict" element={<RequireUser><Predict /></RequireUser>} />
                     <Route path="/dashboard" element={<RequireUser><Dashboard /></RequireUser>} />
                     <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />

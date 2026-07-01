@@ -36,6 +36,7 @@ export default function Header() {
                     <Link to="/" className={navClass("/")} data-testid="nav-home" aria-current={isActive("/") ? "page" : undefined}>Home</Link>
                     <Link to="/bracket" className={navClass("/bracket")} data-testid="nav-bracket" aria-current={isActive("/bracket") ? "page" : undefined}>Bracket</Link>
                     <Link to="/leaderboard" className={navClass("/leaderboard")} data-testid="nav-leaderboard" aria-current={isActive("/leaderboard") ? "page" : undefined}>Leaderboard</Link>
+                    <Link to="/fan" className={navClass("/fan")} data-testid="nav-fan" aria-current={isActive("/fan") ? "page" : undefined}>Fan Fight 🔥</Link>
                     <Link to="/faq" className={navClass("/faq")} data-testid="nav-faq" aria-current={isActive("/faq") ? "page" : undefined}>FAQ</Link>
                 </nav>
 
