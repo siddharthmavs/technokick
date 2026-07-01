@@ -583,6 +583,7 @@ async def predictions_leaderboard_full(date: Optional[str] = None, page: int = 1
                 "company": users.get(r["_id"], {}).get("company", ""),
                 "points": r["points"],
                 "submissions": r["submissions"],
+                "first_submitted": r.get("first_submitted"),
             }
             for i, r in enumerate(rows)
         ],

@@ -14,6 +14,13 @@ function fmtDate(d) {
     return new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
+// Convert UTC ISO string → IST time string e.g. "10:34 AM"
+function fmtSubmitTime(iso) {
+    if (!iso) return "—";
+    const ist = new Date(new Date(iso).getTime() + 5.5 * 60 * 60 * 1000);
+    return ist.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
 export default function Leaderboard() {
     const [selectedDate, setSelectedDate] = useState(null); // null = today/latest
     const [availableDates, setAvailableDates] = useState([]);
@@ -123,10 +130,11 @@ export default function Leaderboard() {
                                         <div className="text-4xl md:text-5xl mb-2">{MEDALS[idx]}</div>
                                         <div className="font-heading text-base md:text-xl uppercase text-center leading-none">{p.name}</div>
                                         <div className="font-mono text-[10px] uppercase opacity-60 mb-2 text-center truncate w-full">{p.company || "—"}</div>
-                                        <div className={`w-full ${heights[idx]} ${bgs[idx]} border-2 border-ink shadow-retro-sm flex flex-col items-center justify-center`}>
+                                        <div className={`w-full ${heights[idx]} ${bgs[idx]} border-2 border-ink shadow-retro-sm flex flex-col items-center justify-center gap-0.5`}>
                                             <span className="font-heading text-3xl md:text-5xl text-brick">{p.points}</span>
                                             <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">points</span>
-                                            {isTied && <span className="font-mono text-[9px] uppercase tracking-widest opacity-50 mt-1">⏱ tiebreak</span>}
+                                            <span className="font-mono text-[9px] opacity-50">⏰ {fmtSubmitTime(p.first_submitted)}</span>
+                                            {isTied && <span className="font-mono text-[9px] uppercase tracking-widest opacity-50">⏱ tiebreak</span>}
                                         </div>
                                     </div>
                                 );
@@ -139,7 +147,7 @@ export default function Leaderboard() {
                                 <table className="w-full font-body text-sm">
                                     <thead className="bg-ink text-mustard">
                                         <tr className="text-left">
-                                            {["#", "Player", "Company", "Predictions", "PTS"].map((h) => (
+                                            {["#", "Player", "Company", "Predictions", "Submitted", "PTS"].map((h) => (
                                                 <th key={h} className="px-4 py-2 font-heading uppercase tracking-wider text-xs">{h}</th>
                                             ))}
                                         </tr>
@@ -155,6 +163,7 @@ export default function Leaderboard() {
                                                     <td className="px-4 py-2 font-bold">{r.name}</td>
                                                     <td className="px-4 py-2 font-mono text-xs uppercase opacity-70">{r.company || "—"}</td>
                                                     <td className="px-4 py-2 font-mono">{r.submissions}</td>
+                                                    <td className="px-4 py-2 font-mono text-xs opacity-60">⏰ {fmtSubmitTime(r.first_submitted)}</td>
                                                     <td className="px-4 py-2 font-mono font-bold text-brick">
                                                         {r.points}{isTied && <span className="ml-1 text-[10px] opacity-50">⏱</span>}
                                                     </td>
@@ -180,14 +189,14 @@ export default function Leaderboard() {
                             <table className="w-full font-body text-sm">
                                 <thead className="bg-ink text-mustard">
                                     <tr className="text-left">
-                                        {["Rank", "Player", "Company", "Predictions", "PTS"].map((h) => (
+                                        {["Rank", "Player", "Company", "Predictions", "Submitted", "PTS"].map((h) => (
                                             <th key={h} className="px-4 py-2 font-heading uppercase tracking-wider text-xs">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {fullLoading ? (
-                                        <tr><td colSpan="5" className="px-4 py-8 text-center opacity-60 font-heading uppercase animate-pulse">Loading…</td></tr>
+                                        <tr><td colSpan="6" className="px-4 py-8 text-center opacity-60 font-heading uppercase animate-pulse">Loading…</td></tr>
                                     ) : fullData?.rows.length ? (
                                         fullData.rows.map((r) => (
                                             <tr key={r.user_id} className="border-t-2 border-ink/10 hover:bg-mustard/20" data-testid={`full-rank-row-${r.rank}`}>
@@ -195,11 +204,12 @@ export default function Leaderboard() {
                                                 <td className="px-4 py-2 font-bold">{r.name}</td>
                                                 <td className="px-4 py-2 font-mono text-xs uppercase opacity-70">{r.company || "—"}</td>
                                                 <td className="px-4 py-2 font-mono">{r.submissions}</td>
+                                                <td className="px-4 py-2 font-mono text-xs opacity-60">⏰ {fmtSubmitTime(r.first_submitted)}</td>
                                                 <td className="px-4 py-2 font-mono font-bold text-brick">{r.points}</td>
                                             </tr>
                                         ))
                                     ) : (
-                                        <tr><td colSpan="5" className="px-4 py-8 text-center opacity-60">No players on this page.</td></tr>
+                                        <tr><td colSpan="6" className="px-4 py-8 text-center opacity-60">No players on this page.</td></tr>
                                     )}
                                 </tbody>
                             </table>
