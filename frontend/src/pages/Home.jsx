@@ -131,13 +131,13 @@ const marqueeItems = announcements.length > 0
                         </div>
                     </button>
                     {/* Fan Fight Card */}
-                    <button onClick={onFanClick} className="text-left retro-card retro-card-hover p-6 md:p-8 relative overflow-hidden bg-ink text-cream" data-testid="fan-card">
+                    <button onClick={onFanClick} style={{ background: '#0A0A0A' }} className="text-left retro-card retro-card-hover p-6 md:p-8 relative overflow-hidden" data-testid="fan-card">
                         <div className="absolute top-4 right-4 stamp stamp-brick rotate-[-6deg]">MEME · ZONE</div>
                         <div className="relative">
-                            <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase">Fan <br/>Fight 🔥</h2>
-                            <p className="mt-4 font-body text-cream/80">Drop your hottest takes, meme captions, and trash talk. Pick a fighter name and join the chaos!</p>
+                            <h2 className="font-heading text-4xl md:text-6xl leading-none uppercase" style={{ color: '#F7F5F0' }}>Fan <br/>Fight 🔥</h2>
+                            <p className="mt-4 font-body" style={{ color: 'rgba(247,245,240,0.75)' }}>Drop your hottest takes, meme captions, and trash talk. Pick a fighter name and join the chaos!</p>
                             <div className="mt-6 flex items-center justify-between">
-                                <span className="font-mono text-xs uppercase tracking-widest text-cream/50">Anonymous · Fun · Unfiltered</span>
+                                <span className="font-mono text-xs uppercase tracking-widest" style={{ color: 'rgba(247,245,240,0.45)' }}>Anonymous · Fun · Unfiltered</span>
                                 <span className="btn-retro btn-brick !py-2 !px-4 !text-sm">Join Now →</span>
                             </div>
                         </div>
