@@ -4,7 +4,10 @@
       "Bash(pip install:*)",
       "Bash(python -m pip install -r /tmp/reqs_local.txt)",
       "Bash(yarn install:*)",
-      "Bash(python -m pip install --no-deps -r /tmp/reqs_local.txt)"
+      "Bash(python -m pip install --no-deps -r /tmp/reqs_local.txt)",
+      "Bash(xargs grep -l \"push\\\\|notif\\\\|alert\\\\|subscription\")",
+      "Bash(xargs ls -la)",
+      "Bash(python -c \"import server; print\\('OK'\\)\")"
     ]
   }
 }

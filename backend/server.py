@@ -831,14 +831,14 @@ async def admin_enter_result(qid: str, data: QuestionResultIn, _: dict = Depends
 
 
 @api_router.get("/admin/predictions/publish-status")
-async def admin_publish_status(_: dict = Depends(require_admin)):
-    today = today_ist_str()
-    todays_qs = await db.questions.find({"date": today}, {"_id": 0, "results_entered": 1}).to_list(200)
-    total = len(todays_qs)
-    declared = sum(1 for q in todays_qs if q.get("results_entered"))
-    pub = await db.leaderboard_publishes.find_one({"date": today}, {"_id": 0})
+async def admin_publish_status(date: Optional[str] = None, _: dict = Depends(require_admin)):
+    target = date or today_ist_str()
+    qs = await db.questions.find({"date": target}, {"_id": 0, "results_entered": 1}).to_list(200)
+    total = len(qs)
+    declared = sum(1 for q in qs if q.get("results_entered"))
+    pub = await db.leaderboard_publishes.find_one({"date": target}, {"_id": 0})
     return {
-        "date": today,
+        "date": target,
         "total_questions": total,
         "declared_questions": declared,
         "all_declared": total > 0 and declared == total,
@@ -846,20 +846,24 @@ async def admin_publish_status(_: dict = Depends(require_admin)):
     }
 
 
+class PublishIn(BaseModel):
+    date: Optional[str] = None
+
+
 @api_router.post("/admin/predictions/publish")
-async def admin_publish_leaderboard(_: dict = Depends(require_admin)):
-    today = today_ist_str()
-    todays_qs = await db.questions.find({"date": today}, {"_id": 0, "results_entered": 1}).to_list(200)
-    if not todays_qs:
-        raise HTTPException(status_code=400, detail="No questions found for today.")
-    if any(not q.get("results_entered") for q in todays_qs):
-        raise HTTPException(status_code=400, detail="Declare results for all of today's questions before publishing.")
+async def admin_publish_leaderboard(data: PublishIn = PublishIn(), _: dict = Depends(require_admin)):
+    target = data.date or today_ist_str()
+    qs = await db.questions.find({"date": target}, {"_id": 0, "results_entered": 1}).to_list(200)
+    if not qs:
+        raise HTTPException(status_code=400, detail=f"No questions found for {target}.")
+    if any(not q.get("results_entered") for q in qs):
+        raise HTTPException(status_code=400, detail="Declare results for all questions on this date before publishing.")
     await db.leaderboard_publishes.update_one(
-        {"date": today},
-        {"$set": {"date": today, "published_at": now_utc().isoformat()}},
+        {"date": target},
+        {"$set": {"date": target, "published_at": now_utc().isoformat()}},
         upsert=True,
     )
-    return {"ok": True, "date": today}
+    return {"ok": True, "date": target}
 
 
 @api_router.post("/admin/announcements")

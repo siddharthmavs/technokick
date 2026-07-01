@@ -372,18 +372,24 @@ function QuestionsTab() {
     const [pubStatus, setPubStatus] = useState(null);
     const [publishing, setPublishing] = useState(false);
     const today = todayIstDateStr();
+    const [pubDate, setPubDate] = useState(today);
     const empty = { date: today, fixture_id: "", text: "", type: "dropdown", options: "", points: 10, order: 1 };
     const [form, setForm] = useState(empty);
 
     const load = () => api.get("/admin/questions").then((r) => setQuestions(r.data)).catch(err);
-    const loadPubStatus = () => api.get("/admin/predictions/publish-status").then((r) => setPubStatus(r.data)).catch(() => {});
-    useEffect(() => { load(); loadPubStatus(); api.get("/fixtures").then((r) => setFixtures(r.data)).catch(() => {}); }, []);
+    const loadPubStatus = (d) => {
+        const date = d !== undefined ? d : pubDate;
+        api.get(`/admin/predictions/publish-status?date=${date}`).then((r) => setPubStatus(r.data)).catch(() => {});
+    };
+    useEffect(() => { load(); loadPubStatus(); api.get("/fixtures").then((r) => setFixtures(r.data)).catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const onPubDateChange = (d) => { setPubDate(d); loadPubStatus(d); };
 
     const publish = async () => {
         setPublishing(true);
         try {
-            await api.post("/admin/predictions/publish");
-            toast.success("🏆 Leaderboard published! Players can now see today's results.");
+            await api.post("/admin/predictions/publish", { date: pubDate });
+            toast.success(`🏆 Leaderboard published for ${pubDate}! Players can now see results.`);
             loadPubStatus();
         } catch (e) { err(e); } finally { setPublishing(false); }
     };
@@ -414,12 +420,24 @@ function QuestionsTab() {
     return (
         <div className="space-y-6">
             {pubStatus && (
-                <div className={`retro-card p-4 flex flex-wrap items-center gap-3 justify-between ${pubStatus.published ? "bg-teal/20" : "bg-mustard"}`} data-testid="publish-leaderboard-card">
-                    <div>
-                        <div className="font-heading uppercase text-lg">Leaderboard Reveal · {pubStatus.date}</div>
-                        <div className="font-mono text-xs uppercase opacity-70 mt-1">
-                            {pubStatus.declared_questions}/{pubStatus.total_questions} questions declared
-                            {pubStatus.published && " · ✅ Published"}
+                <div className={`retro-card p-4 flex flex-wrap items-center gap-4 justify-between ${pubStatus.published ? "bg-teal/20" : "bg-mustard"}`} data-testid="publish-leaderboard-card">
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div>
+                            <div className="font-heading uppercase text-lg">Leaderboard Reveal</div>
+                            <div className="font-mono text-xs uppercase opacity-70 mt-1">
+                                {pubStatus.declared_questions}/{pubStatus.total_questions} questions declared
+                                {pubStatus.published && " · ✅ Published"}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="label-retro !text-[10px]">Date to publish</label>
+                            <input
+                                type="date"
+                                value={pubDate}
+                                onChange={(e) => onPubDateChange(e.target.value)}
+                                className="input-retro !py-1 !text-sm"
+                                data-testid="publish-date-picker"
+                            />
                         </div>
                     </div>
                     <button
