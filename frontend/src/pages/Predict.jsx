@@ -128,11 +128,25 @@ function QuestionCard({ q, index, fixture, value, onChange, submission, locked }
 function AnswerInput({ q, value, onChange, index, locked }) {
     if (q.type === "numeric_score") {
         const v = value || {};
+        const onChangeA = (e) => {
+            if (locked) return;
+            const a = e.target.value === "" ? "" : Number(e.target.value);
+            // auto-default b to 0 when first touching a
+            const b = v.b !== "" && v.b !== undefined ? v.b : 0;
+            onChange({ ...v, a, b });
+        };
+        const onChangeB = (e) => {
+            if (locked) return;
+            const b = e.target.value === "" ? "" : Number(e.target.value);
+            // auto-default a to 0 when first touching b
+            const a = v.a !== "" && v.a !== undefined ? v.a : 0;
+            onChange({ ...v, a, b });
+        };
         return (
             <div className="flex items-center gap-3" data-testid={`answer-numeric-${index}`}>
-                <input type="number" min="0" max="20" value={v.a ?? ""} onChange={(e) => !locked && onChange({ ...v, a: e.target.value === "" ? "" : Number(e.target.value) })} readOnly={locked} className={`input-retro !w-20 text-center font-mono text-xl ${locked ? "opacity-60 cursor-not-allowed" : ""}`} placeholder="0" data-testid={`score-a-input-${index}`} />
+                <input type="number" min="0" max="20" value={v.a ?? ""} onChange={onChangeA} readOnly={locked} className={`input-retro !w-20 text-center font-mono text-xl ${locked ? "opacity-60 cursor-not-allowed" : ""}`} placeholder="0" data-testid={`score-a-input-${index}`} />
                 <span className="font-heading text-2xl">—</span>
-                <input type="number" min="0" max="20" value={v.b ?? ""} onChange={(e) => !locked && onChange({ ...v, b: e.target.value === "" ? "" : Number(e.target.value) })} readOnly={locked} className={`input-retro !w-20 text-center font-mono text-xl ${locked ? "opacity-60 cursor-not-allowed" : ""}`} placeholder="0" data-testid={`score-b-input-${index}`} />
+                <input type="number" min="0" max="20" value={v.b ?? ""} onChange={onChangeB} readOnly={locked} className={`input-retro !w-20 text-center font-mono text-xl ${locked ? "opacity-60 cursor-not-allowed" : ""}`} placeholder="0" data-testid={`score-b-input-${index}`} />
                 <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">Exact score = bonus points!</span>
             </div>
         );
