@@ -414,7 +414,7 @@ function QuestionsTab() {
                 order: Number(form.order),
                 options: form.type === "numeric_score" || form.type === "text" ? [] : form.type === "radio" ? ["Yes", "No"] : form.options.split(",").map((s) => s.trim()).filter(Boolean),
             });
-            toast.success(form.status === "draft" ? "Question saved as draft — auto-publishes at 10AM IST." : "Question is live!");
+            toast.success(form.status === "draft" ? "Question saved as draft — click ⚡ Go Live when ready." : "Question is live!");
             setForm({ ...empty, date: form.date, fixture_id: form.fixture_id });
             load();
             loadPubStatus();
@@ -426,12 +426,21 @@ function QuestionsTab() {
     };
     const onQuestionChanged = () => { load(); loadPubStatus(); };
 
-    // Group questions by date
-    const byDate = (questions || []).reduce((acc, q) => {
+    const [qFilter, setQFilter] = useState("live");
+
+    // Group questions by date (after filter)
+    const filtered = (questions || []).filter((q) => {
+        if (qFilter === "live") return q.status !== "draft";
+        if (qFilter === "draft") return q.status === "draft";
+        return true;
+    });
+    const byDate = filtered.reduce((acc, q) => {
         (acc[q.date] = acc[q.date] || []).push(q);
         return acc;
     }, {});
     const dates = Object.keys(byDate).sort();
+
+    const draftTotal = (questions || []).filter((q) => q.status === "draft").length;
 
     if (!questions) return <Loading />;
     return (
@@ -506,7 +515,7 @@ function QuestionsTab() {
                             <button type="button" onClick={() => setForm({ ...form, status: "draft" })}
                                 className={`px-4 py-2 font-heading text-xs uppercase tracking-wider ${form.status === "draft" ? "bg-ink text-mustard" : "bg-white hover:bg-mustard/30"}`}
                                 data-testid="status-draft-btn">
-                                📅 Schedule (auto-publish 10AM IST)
+                                📅 Save as Draft
                             </button>
                             <button type="button" onClick={() => setForm({ ...form, status: "live" })}
                                 className={`px-4 py-2 font-heading text-xs uppercase tracking-wider border-l-2 border-ink ${form.status === "live" ? "bg-teal text-white" : "bg-white hover:bg-mustard/30"}`}
@@ -514,15 +523,29 @@ function QuestionsTab() {
                                 ⚡ Publish Now (live)
                             </button>
                         </div>
-                        {form.status === "draft" && <p className="font-mono text-[10px] uppercase tracking-widest opacity-60 mt-1">Saved as draft — users can't see it until you go live manually or 10AM IST on the question's date.</p>}
+                        {form.status === "draft" && <p className="font-mono text-[10px] uppercase tracking-widest opacity-60 mt-1">Saved as draft — users can't see it until you click ⚡ Go Live.</p>}
                     </div>
                     <div className="flex items-end"><button className="btn-retro btn-brick w-full !text-sm" data-testid="question-create-btn">+ Save</button></div>
                 </div>
             </form>
 
+            {/* FILTER BAR */}
+            <div className="flex items-center gap-3 flex-wrap">
+                <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">Show:</span>
+                <div className="inline-flex border-2 border-ink shadow-retro-sm">
+                    {[["live", "Live"], ["draft", `Drafts${draftTotal > 0 ? ` (${draftTotal})` : ""}`], ["all", "All"]].map(([val, label], i) => (
+                        <button key={val} type="button" onClick={() => setQFilter(val)}
+                            className={`px-3 py-1.5 font-heading text-xs uppercase tracking-wider ${i > 0 ? "border-l-2 border-ink" : ""} ${qFilter === val ? "bg-ink text-mustard" : "bg-white hover:bg-mustard/30"}`}
+                            data-testid={`q-filter-${val}`}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* QUESTIONS GROUPED BY DATE */}
             <div className="space-y-8" data-testid="admin-questions-list">
-                {dates.length === 0 && <div className="ticket p-6 text-center opacity-60">No questions yet.</div>}
+                {dates.length === 0 && <div className="ticket p-6 text-center opacity-60">{qFilter === "draft" ? "No drafts." : qFilter === "live" ? "No live questions." : "No questions yet."}</div>}
                 {dates.map((date) => {
                     const qs = byDate[date];
                     const draftCount = qs.filter((q) => q.status === "draft").length;
@@ -685,7 +708,6 @@ function AdminQuestionRow({ q, fixtures, onChanged, onDelete }) {
                         <div className="font-bold font-body">{q.text}</div>
                         <div className="font-mono text-[10px] uppercase opacity-60 mt-1">
                             {q.date} · {q.type} · {q.points} pts
-                            {isDraft && " · auto-publishes 10AM IST"}
                         </div>
                     </div>
                 </div>

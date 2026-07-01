@@ -430,10 +430,6 @@ async def list_fixtures():
 @api_router.get("/predictions/today")
 async def predictions_today(user: dict = Depends(get_current_user)):
     today = today_ist_str()
-    now_ist = now_utc() + IST_OFFSET
-    # Auto-publish any scheduled drafts once 10AM IST arrives
-    if now_ist.hour >= 10:
-        await db.questions.update_many({"date": today, "status": "draft"}, {"$set": {"status": "live"}})
     # include "live" questions + legacy docs that have no status field yet
     questions = await db.questions.find(
         {"date": today, "$or": [{"status": "live"}, {"status": {"$exists": False}}]},
