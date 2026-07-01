@@ -14,16 +14,16 @@ function fmtDate(d) {
     return new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
-// Format ISO timestamp as UTC time string e.g. "10:34 AM"
+// Format ISO timestamp as IST time string e.g. "10:34 AM"
 function fmtSubmitTime(iso) {
     if (!iso) return "—";
-    const utcTime = new Date(iso).toLocaleTimeString([], {
+    const istTime = new Date(iso).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
         hour12: true,
-        timeZone: "UTC"
+        timeZone: "Asia/Kolkata"
     });
-    return `${utcTime} UTC`;
+    return `${istTime} IST`;
 }
 
 export default function Leaderboard() {
