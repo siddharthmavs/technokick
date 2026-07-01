@@ -298,7 +298,7 @@ function PostCard({ post: initPost, currentUserId, onDelete }) {
                     <img
                         src={`${BACKEND_URL}${post.image_url}`}
                         alt="post"
-                        className="w-full object-cover max-h-96"
+                        className="w-full object-cover"
                         loading="lazy"
                     />
                 </div>
