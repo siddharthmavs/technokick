@@ -527,7 +527,7 @@ async def _require_leaderboard_published(date: Optional[str] = None) -> str:
 async def predictions_leaderboard(date: Optional[str] = None):
     target = await _require_leaderboard_published(date)
     pipe = [
-        {"$match": {"date": {"$lte": target}}},
+        {"$match": {"date": target}},
         {"$group": {"_id": "$user_id", "points": {"$sum": "$points_earned"}, "submissions": {"$sum": 1}, "first_submitted": {"$min": "$submitted_at"}}},
         {"$sort": {"points": -1, "first_submitted": 1}},
         {"$limit": 10},
@@ -555,7 +555,7 @@ async def predictions_leaderboard_full(date: Optional[str] = None, page: int = 1
     page_size = max(1, min(page_size, 100))
     skip = (page - 1) * page_size
     pipe = [
-        {"$match": {"date": {"$lte": target}}},
+        {"$match": {"date": target}},
         {"$group": {"_id": "$user_id", "points": {"$sum": "$points_earned"}, "submissions": {"$sum": 1}, "first_submitted": {"$min": "$submitted_at"}}},
         {"$sort": {"points": -1, "first_submitted": 1}},
         {"$facet": {
